@@ -1,0 +1,9 @@
+<Bindings>
+    <Layer name="SI_KEYBINDINGS_LAYER_GENERAL">
+        <Category name="Story Saver">
+            <Action name="TOGGLE_STORY_SAVER">
+                <Down>SLASH_COMMANDS['/storysaver']()</Down>
+            </Action>
+        </Category>
+    </Layer>
+</Bindings>
