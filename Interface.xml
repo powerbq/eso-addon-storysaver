@@ -7,13 +7,13 @@
             <Controls>
                 <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop"/>
 
-                <Label name="$(parent)SelectedOption" font="ZoFontConversationOption" color="666666" horizontalAlignment="CENTER" wrapMode="ELLIPSIS">
+                <Label name="$(parent)SelectedOptions" font="ZoFontConversationOption" color="666666" horizontalAlignment="CENTER" wrapMode="ELLIPSIS">
                     <Anchor point="TOP" relativeTo="$(parent)" offsetX="30"/>
                     <Dimensions x="750"/>
                 </Label>
 
                 <Texture name="$(parent)TopDivider" textureFile="EsoUI/Art/Miscellaneous/horizontaldivider.dds">
-                    <Anchor point="TOP" relativeTo="$(parent)SelectedOption" relativePoint="BOTTOM" offsetY="5"/>
+                    <Anchor point="TOP" relativeTo="$(parent)SelectedOptions" relativePoint="BOTTOM" offsetY="5"/>
                     <Dimensions x="750" y="4"/>
                 </Texture>
 

@@ -28,7 +28,7 @@ function StorySaverInterface:InitializeInterface()
 
     ESO_Dialogs['StorySaverDeduplicationDialog'] = {
         title = {
-            text = GetString(STORY_SAVER_DEDUPLICATION),
+            text = GetString(STORY_SAVER_OPTIMIZE_STORAGE),
         },
         mainText = {
             text = GetString(STORY_SAVER_CONFIRM),
@@ -37,8 +37,8 @@ function StorySaverInterface:InitializeInterface()
             [1] = {
                 text = SI_DIALOG_CONFIRM,
                 callback = function(...)
-                    StorySaver:Deduplication()
-                    self:RefreshData()
+                    StorySaver:CleanupEvents()
+                    StorySaver:CleanupCache()
                 end,
             },
             [2] = {
@@ -73,7 +73,7 @@ function StorySaverInterface:InitializeInterface()
             alignment = KEYBIND_STRIP_ALIGN_LEFT,
             keybind = 'UI_SHORTCUT_SECONDARY',
             name = function()
-                return GetString(STORY_SAVER_DEDUPLICATION)
+                return GetString(STORY_SAVER_OPTIMIZE_STORAGE)
             end,
             callback = function()
                 ZO_Dialogs_ShowDialog('StorySaverDeduplicationDialog')
@@ -129,13 +129,13 @@ function StorySaverInterface:InitializeInterface()
     scene:AddFragment(ZO_SetTitleFragment:New(SI_WINDOW_TITLE_STORY_SAVER))
     scene:AddFragment(ZO_FadeSceneFragment:New(StorySaverEventListFrame))
     scene:RegisterCallback('StateChange',
-        function(oldState, newState)
-            if (newState == SCENE_SHOWING) then
-                self:AddKeybinds()
-            elseif (newState == SCENE_HIDDEN) then
-                self:RemoveKeybinds()
-            end
-        end)
+            function(_, newState)
+                if (newState == SCENE_SHOWING) then
+                    self:AddKeybinds()
+                elseif (newState == SCENE_HIDDEN) then
+                    self:RemoveKeybinds()
+                end
+            end)
 
     SLASH_COMMANDS['/storysaver'] = function()
         if StorySaverEventListFrame:IsHidden() then
@@ -152,6 +152,38 @@ function StorySaverInterface:SortScrollList()
     table.sort(self.scrollData, self.sortFunction)
 end
 
+function StorySaverInterface:GetDateStringFromTimestamp(timeStamp)
+    local currentTimeStamp = GetTimeStamp()
+    local today = GetDateStringFromTimestamp(currentTimeStamp)
+
+    local when = GetDateStringFromTimestamp(timeStamp)
+    if when == today then
+        when = ZO_FormatDurationAgo(currentTimeStamp - timeStamp)
+    end
+
+    return when
+end
+
+function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
+    local body = ''
+
+    for hash, data in pairs(hashes) do
+        local line = '—'
+        if hash ~= '' then
+            line = StorySaver:GetCache('dialogues', name)[hash]
+        end
+        if body ~= '' then
+            body = body .. '\r\n'
+        end
+        body = body .. line
+        if withDate then
+            body = body .. ' [' .. self:GetDateStringFromTimestamp(data.timeStamp) .. ']'
+        end
+    end
+
+    return body
+end
+
 function StorySaverInterface:FilterScrollList()
     ZO_ClearNumericallyIndexedTable(self.scrollData)
 
@@ -165,7 +197,7 @@ function StorySaverInterface:FilterScrollList()
 
     local resultControl = GetControl(filterAndSearchControl, 'Result')
 
-    for i, row in pairs(self.masterList) do
+    for _, row in pairs(self.masterList) do
         local skip = false
 
         local eventType = row.eventType
@@ -187,20 +219,20 @@ function StorySaverInterface:FilterScrollList()
 
             local body = ''
             if eventType ~= 'items' then
-                body = StorySaver:GetAccountCache(eventType, name)[hash]
+                body = StorySaver:GetCache(eventType, name)[hash]
             end
 
             if eventType == 'books' then
                 body = table.concat(body)
             elseif eventType == 'dialogues' then
-                local selectedOptionHash = eventData.selectedOptionHash
-                if selectedOptionHash ~= nil then
-                    body = body .. '\r\n' .. StorySaver:GetAccountCache(eventType, name)[selectedOptionHash]
+                local selectedOptionsBody = self:GetBodyForHashes(name, eventData.selectedOptionHashes)
+                if selectedOptionsBody ~= '' then
+                    body = body .. '\r\n' .. selectedOptionsBody
                 end
 
-                local optionHashes = eventData.optionHashes
-                for i = 1, #optionHashes do
-                    body = body .. '\r\n' .. StorySaver:GetAccountCache(eventType, name)[optionHashes[i]]
+                local optionsBody = self:GetBodyForHashes(name, eventData.optionHashes)
+                if optionsBody ~= '' then
+                    body = body .. '\r\n' .. optionsBody
                 end
             end
 
@@ -220,19 +252,11 @@ end
 function StorySaverInterface:BuildMasterList()
     self.masterList = {}
 
-    local currentTimeStamp = GetTimeStamp()
-    local today = GetDateStringFromTimestamp(currentTimeStamp)
-
     for _, eventType in pairs({ 'dialogues', 'subtitles', 'books', 'items' }) do
-        for name, events in pairs(StorySaver.characterSavedVariables[eventType]) do
+        for name, events in pairs(StorySaver.events[eventType]) do
             for eventId, eventData in pairs(events) do
                 local timeStamp, _ = StorySaver:ParseEventId(eventId)
-
-                local when = GetDateStringFromTimestamp(timeStamp)
-                if when == today then
-                    when = ZO_FormatDurationAgo(currentTimeStamp - timeStamp)
-                end
-
+                local when = self:GetDateStringFromTimestamp(timeStamp)
                 local zoneName = zo_strformat('<<C:1>>', GetZoneNameByIndex(eventData.zoneIndex))
 
                 table.insert(self.masterList, { eventType = eventType, name = name, zoneName = zoneName, when = when, eventId = eventId, eventData = eventData })
@@ -273,17 +297,17 @@ function StorySaverInterface:OnRowStateChanged(control, state)
     StorySaverBrowserFrame:SetHidden(true)
 
     local bodyControl = GetControl(StorySaverBrowserFrame, 'Body')
-    local selectedOptionControl = GetControl(StorySaverBrowserFrame, 'SelectedOption')
+    local selectedOptionsControl = GetControl(StorySaverBrowserFrame, 'SelectedOptions')
     local optionsControl = GetControl(StorySaverBrowserFrame, 'Options')
     local topDividerControl = GetControl(StorySaverBrowserFrame, 'TopDivider')
     local bottomDividerControl = GetControl(StorySaverBrowserFrame, 'BottomDivider')
 
     bodyControl:SetText('')
-    selectedOptionControl:SetText('')
+    selectedOptionsControl:SetText('')
     optionsControl:SetText('')
 
     bodyControl:SetHidden(true)
-    selectedOptionControl:SetHidden(true)
+    selectedOptionsControl:SetHidden(true)
     optionsControl:SetHidden(true)
     topDividerControl:SetHidden(true)
     bottomDividerControl:SetHidden(true)
@@ -303,31 +327,19 @@ function StorySaverInterface:OnRowStateChanged(control, state)
         return
     end
 
-    local body = StorySaver:GetAccountCache(eventType, name)[hash]
+    local body = StorySaver:GetCache(eventType, name)[hash]
     bodyControl:SetText(body)
     bodyControl:SetHidden(false)
 
     if eventType == 'dialogues' then
-        local selectedOptionHash = eventData.selectedOptionHash
-        if selectedOptionHash ~= nil then
-            body = StorySaver:GetAccountCache(eventType, name)[selectedOptionHash]
-            selectedOptionControl:SetText(body)
-            selectedOptionControl:SetHidden(false)
+        local selectedOptionsBody = self:GetBodyForHashes(name, eventData.selectedOptionHashes, true)
+        if selectedOptionsBody ~= '' then
+            selectedOptionsControl:SetText(selectedOptionsBody)
+            selectedOptionsControl:SetHidden(false)
             topDividerControl:SetHidden(false)
         end
 
-        local optionsBody = ''
-
-        local optionHashes = eventData.optionHashes
-        for i = 1, #optionHashes do
-            body = StorySaver:GetAccountCache(eventType, name)[optionHashes[i]]
-            if i == 1 then
-                optionsBody = body
-            else
-                optionsBody = optionsBody .. '\r\n' .. body
-            end
-        end
-
+        local optionsBody = self:GetBodyForHashes(name, eventData.optionHashes, true)
         if optionsBody ~= '' then
             optionsControl:SetText(optionsBody)
             optionsControl:SetHidden(false)
@@ -345,12 +357,12 @@ function StorySaverInterface:Read(data)
     local showTitle = eventData.showTitle
     local hash = eventData.hash
 
-    local parts = StorySaver:GetAccountCache('books', title)[hash]
+    local parts = StorySaver:GetCache('books', title)[hash]
     local body = table.concat(parts)
 
     StorySaver.coreSetupBook(LORE_READER, title, body, medium, showTitle, IsInGamepadPreferredMode())
 
-    SCENE_MANAGER:Push('loreReaderInteraction')
+    SCENE_MANAGER:Push('loreReaderDefault')
 end
 
 function StorySaverInterface:ShowOnMap(data)

@@ -5,9 +5,9 @@
 
 ## Title: Story Saver
 ## Author: f1rex
-## Version: 11
-## AddOnVersion: 11
-## APIVersion: 101032
+## Version: 12
+## AddOnVersion: 12
+## APIVersion: 101040
 ## SavedVariables: StorySaverSavedVariables
 ## OptionalDependsOn: LibMapPing
 ## DependsOn: LibGPS>=65
@@ -15,6 +15,7 @@
 lang/en.lua
 lang/$(language).lua
 
+OldData.lua
 StorySaver.lua
 
 Interface.lua

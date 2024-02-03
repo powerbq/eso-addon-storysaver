@@ -7,98 +7,122 @@ StorySaver.coreSetupBook = nil
 StorySaver.coreAddQuestItem = nil
 StorySaver.interface = nil
 
-StorySaver.characterSavedVariablesDefaults = {}
-StorySaver.characterSavedVariablesDefaults['dialogues'] = {}
-StorySaver.characterSavedVariablesDefaults['subtitles'] = {}
-StorySaver.characterSavedVariablesDefaults['books'] = {}
-StorySaver.characterSavedVariablesDefaults['items'] = {}
+StorySaver.currentWorldName = GetWorldName()
+StorySaver.currentCharacterName = GetUnitName('player')
 
 StorySaver.accountSavedVariablesDefaults = {}
-StorySaver.accountSavedVariablesDefaults['dialogues'] = {}
-StorySaver.accountSavedVariablesDefaults['subtitles'] = {}
-StorySaver.accountSavedVariablesDefaults['books'] = {}
+StorySaver.accountSavedVariablesDefaults['cache'] = {}
+StorySaver.accountSavedVariablesDefaults['cache']['dialogues'] = {}
+StorySaver.accountSavedVariablesDefaults['cache']['subtitles'] = {}
+StorySaver.accountSavedVariablesDefaults['cache']['books'] = {}
+StorySaver.accountSavedVariablesDefaults['events'] = {}
 
-function StorySaver:GetAccountCache(eventType, name)
-    if self.accountSavedVariables[eventType][name] == nil then
-        self.accountSavedVariables[eventType][name] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['dialogues'] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['subtitles'] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['books'] = {}
+StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['items'] = {}
+
+function StorySaver:GetCache(eventType, name)
+    if self.accountSavedVariables.cache[eventType][name] == nil then
+        self.accountSavedVariables.cache[eventType][name] = {}
     end
 
-    return self.accountSavedVariables[eventType][name]
+    return self.accountSavedVariables.cache[eventType][name]
 end
 
-function StorySaver:CleanupEvents(eventType, name)
-    local i = 0
+function StorySaver:CleanupCacheForName(eventType, name)
+    local recordsDeleted = 0
 
-    for eventId, _ in pairs(self.characterSavedVariables[eventType][name]) do
-        i = i + 1
+    if eventType == 'items' then
+        return recordsDeleted
     end
 
-    if i == 0 then
-        self.characterSavedVariables[eventType][name] = nil
-    end
-end
+    for hash, _ in pairs(self.accountSavedVariables.cache[eventType][name]) do
+        local exists = false
 
-function StorySaver:RemoveEvent(eventType, name, eventId)
-    local eventData = self.characterSavedVariables[eventType][name][eventId]
+        local events = self.events[eventType][name]
+        if events == nil then
+            events = {}
+        end
+        for _, eventData in pairs(events) do
+            if hash == eventData.hash then
+                exists = true
+                break
+            end
 
-    self.characterSavedVariables[eventType][name][eventId] = nil
+            if eventType == 'dialogues' then
+                for selectedOptionHash, _ in pairs(eventData.selectedOptionHashes) do
+                    if hash == selectedOptionHash then
+                        exists = true
+                        break
+                    end
+                end
 
-    self:CleanupEvents(eventType, name)
-end
+                if exists then
+                    break
+                end
 
-function StorySaver:IsEventDuplicate(eventType, name, eventId)
-    local currentEventId, currentEventData = eventId, self.characterSavedVariables[eventType][name][eventId]
-
-    for eventId, eventData in pairs(self.characterSavedVariables[eventType][name]) do
-        if eventId ~= currentEventId then
-            if eventData.hash == currentEventData.hash then
-                if eventType ~= 'dialogues' then
-                    return true
-                else
-                    if eventData.selectedOptionHash == currentEventData.selectedOptionHash then
-                        if #eventData.optionHashes == #currentEventData.optionHashes then
-                            local fullMatch = true
-                            for i = 1, #eventData.optionHashes do
-                                if eventData.optionHashes[i] ~= currentEventData.optionHashes[i] then
-                                    fullMatch = false
-                                    break
-                                end
-                            end
-
-                            return fullMatch
-                        end
+                for optionHash, _ in pairs(eventData.optionHashes) do
+                    if hash == optionHash then
+                        exists = true
+                        break
                     end
                 end
             end
         end
+
+        if not exists then
+            self.accountSavedVariables.cache[eventType][name][hash] = nil
+
+            recordsDeleted = recordsDeleted + 1
+        end
     end
 
-    return false
+    for _, _ in pairs(StorySaver.accountSavedVariables.cache[eventType][name]) do
+        return recordsDeleted
+    end
+
+    StorySaver.accountSavedVariables.cache[eventType][name] = nil
+
+    return recordsDeleted
 end
 
-function StorySaver:Deduplication()
-    local eventTypes = { 'dialogues', 'subtitles', 'books', 'items' }
+function StorySaver:CleanupCache()
+    local recordsDeleted = 0
+
+    local eventTypes = { 'dialogues', 'subtitles', 'books' }
     for _, eventType in pairs(eventTypes) do
-        for name, events in pairs(self.characterSavedVariables[eventType]) do
-            local keys = {}
-            for eventId, _ in pairs(events) do
-                table.insert(keys, eventId)
-            end
+        for name, _ in pairs(self.accountSavedVariables.cache[eventType]) do
+            recordsDeleted = recordsDeleted + self:CleanupCacheForName(eventType, name)
+        end
+    end
 
-            table.sort(keys, function(a, b) return a > b end)
+    d(self.name .. ': ' .. string.format(GetString(STORY_SAVER_RECORDS_DELETED_FROM_CACHE), recordsDeleted))
+end
 
-            for _, eventId in ipairs(keys) do
-                if StorySaver:IsEventDuplicate(eventType, name, eventId) then
-                    StorySaver:RemoveEvent(eventType, name, eventId)
-                end
-            end
+function StorySaver:CleanupEventsForName(eventType, name)
+    for _, _ in pairs(self.events[eventType][name]) do
+        return
+    end
 
-            self:CleanupEvents(eventType, name)
+    self.events[eventType][name] = nil
+end
+
+function StorySaver:CleanupEvents()
+    for eventType, events in pairs(self.events) do
+        for name, _ in pairs(events) do
+            self:CleanupEventsForName(eventType, name)
         end
     end
 end
 
-function StorySaver:NewEvent(eventType, name)
+function StorySaver:RemoveEvent(eventType, name, eventId)
+    self.events[eventType][name][eventId] = nil
+end
+
+function StorySaver:NewEvent(eventType, name, hash)
     self.eventNumber = self.eventNumber + 1
 
     local zoneIndex = GetUnitZoneIndex('player')
@@ -112,56 +136,91 @@ function StorySaver:NewEvent(eventType, name)
         y = y,
     }
 
-    if self.characterSavedVariables[eventType][name] == nil then
-        self.characterSavedVariables[eventType][name] = {}
+    if eventType == 'dialogues' then
+        eventData.optionHashes = {}
+        eventData.selectedOptionHashes = {}
     end
 
-    self.characterSavedVariables[eventType][name][eventId] = eventData
+    if self.events[eventType][name] == nil then
+        self.events[eventType][name] = {}
+    end
 
-    return eventId, eventData
+    self.events[eventType][name][eventId] = eventData
+
+    return eventData
+end
+
+function StorySaver:GetEventWithHash(eventType, name, hash)
+    if self.events[eventType][name] == nil then
+        return nil
+    end
+
+    for _, eventData in pairs(self.events[eventType][name]) do
+        if eventData.hash == hash then
+            return eventData
+        end
+    end
+
+    return nil
+end
+
+function StorySaver.GetOptionTypes()
+    local optionTypes = {}
+
+    for i = 1, GetChatterOptionCount() do
+        local optionType
+        _, optionType = GetChatterOption(i)
+
+        optionTypes[optionType] = true
+    end
+
+    return optionTypes
 end
 
 function StorySaver.OnDialogue(...)
     local eventType = 'dialogues'
     local name = GetUnitName('interact')
 
+    --local body, numOptions, atGreeting = GetChatterData()
     local area = ZO_InteractWindowTargetAreaBodyText
     local body = area:GetText()
-    local hash = HashString(body) .. '-' .. #body
-
     if #body == 0 then
         return
     end
+    local hash = HashString(body) .. '-' .. #body
 
-    local accountCache = StorySaver:GetAccountCache(eventType, name)
-    accountCache[hash] = body
-
-    local eventId, eventData = StorySaver:NewEvent(eventType, name)
-    eventData.hash = hash
-    eventData.optionHashes = {}
-    eventData.selectedOptionHash = StorySaver.lastSelectedOptionHash
-
-    StorySaver.lastSelectedOptionHash = nil
-
-    local cnt = ZO_InteractWindowPlayerAreaOptions:GetNumChildren()
-    for i = 1, cnt do
-        area = ZO_InteractWindowPlayerAreaOptions:GetChild(i)
-        body = area:GetText()
-        hash = HashString(body) .. '-' .. #body
-
-        local accountCache = StorySaver:GetAccountCache(eventType, name)
-        accountCache[hash] = body
-
-        eventData.optionHashes[i] = hash
-
-        local nextArea = ZO_InteractWindowPlayerAreaOptions:GetChild(i + 1)
-        if nextArea:IsHidden() then
-            break
-        end
+    local optionTypes = StorySaver.GetOptionTypes()
+    if optionTypes[CHATTER_START_TRADINGHOUSE] and not optionTypes[CHATTER_START_BANK] then
+        return
     end
 
-    if StorySaver:IsEventDuplicate(eventType, name, eventId) then
-        StorySaver:RemoveEvent(eventType, name, eventId)
+    local accountCache = StorySaver:GetCache(eventType, name)
+    accountCache[hash] = body
+
+    local eventData = StorySaver:GetEventWithHash(eventType, name, hash)
+    if eventData == nil then
+        eventData = StorySaver:NewEvent(eventType, name, hash)
+    end
+
+    if eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash] == nil then
+        eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash] = {}
+        eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash]['timeStamp'] = GetTimeStamp()
+    end
+    StorySaver.lastSelectedOptionHash = ''
+
+    for i = 1, GetChatterOptionCount() do
+        local optionType
+        body, optionType = GetChatterOption(i)
+        hash = HashString(body) .. '-' .. #body
+
+        accountCache = StorySaver:GetCache(eventType, name)
+        accountCache[hash] = body
+
+        if eventData.optionHashes[hash] == nil then
+            eventData.optionHashes[hash] = {}
+            eventData.optionHashes[hash]['type'] = optionType
+            eventData.optionHashes[hash]['timeStamp'] = GetTimeStamp()
+        end
     end
 
     StorySaver.interface:TriggerRefreshData()
@@ -173,7 +232,7 @@ function StorySaver.OnDialogueOptionSelected(obj, area)
     local body = area:GetText()
     local hash = HashString(body) .. '-' .. #body
 
-    local accountCache = StorySaver:GetAccountCache(eventType, name)
+    local accountCache = StorySaver:GetCache(eventType, name)
     accountCache[hash] = body
 
     StorySaver.lastSelectedOptionHash = hash
@@ -182,7 +241,7 @@ function StorySaver.OnDialogueOptionSelected(obj, area)
 end
 
 function StorySaver.OnDialogueEnd(...)
-    StorySaver.lastSelectedOptionHash = nil
+    StorySaver.lastSelectedOptionHash = ''
 end
 
 function StorySaver.OnSubtitle(arg1, msgType, from, body)
@@ -194,15 +253,14 @@ function StorySaver.OnSubtitle(arg1, msgType, from, body)
     local name = zo_strformat('<<C:1>>', from)
     local hash = HashString(body) .. '-' .. #body
 
-    local accountCache = StorySaver:GetAccountCache(eventType, name)
+    if StorySaver:GetEventWithHash(eventType, name, hash) ~= nil then
+        return
+    end
+
+    local accountCache = StorySaver:GetCache(eventType, name)
     accountCache[hash] = body
 
-    local eventId, eventData = StorySaver:NewEvent(eventType, name)
-    eventData.hash = hash
-
-    if StorySaver:IsEventDuplicate(eventType, name, eventId) then
-        StorySaver:RemoveEvent(eventType, name, eventId)
-    end
+    StorySaver:NewEvent(eventType, name, hash)
 
     StorySaver.interface:TriggerRefreshData()
 end
@@ -210,6 +268,10 @@ end
 function StorySaver.OnBook(obj, name, body, medium, showTitle, ...)
     local eventType = 'books'
     local hash = HashString(body) .. '-' .. #body
+
+    if StorySaver:GetEventWithHash(eventType, name, hash) ~= nil then
+        return
+    end
 
     local i = 1
     local parts = {}
@@ -229,17 +291,12 @@ function StorySaver.OnBook(obj, name, body, medium, showTitle, ...)
 
     parts[i] = part:sub(1, #part - 1)
 
-    local accountCache = StorySaver:GetAccountCache(eventType, name)
+    local accountCache = StorySaver:GetCache(eventType, name)
     accountCache[hash] = parts
 
-    local eventId, eventData = StorySaver:NewEvent(eventType, name)
-    eventData.hash = hash
+    local eventData = StorySaver:NewEvent(eventType, name, hash)
     eventData.medium = medium
     eventData.showTitle = showTitle
-
-    if StorySaver:IsEventDuplicate(eventType, name, eventId) then
-        StorySaver:RemoveEvent(eventType, name, eventId)
-    end
 
     StorySaver.interface:TriggerRefreshData()
 
@@ -250,12 +307,11 @@ function StorySaver.OnItem(obj, questItem, ...)
     local eventType = 'items'
     local name = questItem.name
 
-    local eventId, eventData = StorySaver:NewEvent(eventType, name)
-    eventData.hash = questItem.questItemId
-
-    if StorySaver:IsEventDuplicate(eventType, name, eventId) then
-        StorySaver:RemoveEvent(eventType, name, eventId)
+    if StorySaver:GetEventWithHash(eventType, name, questItem.questItemId) ~= nil then
+        return
     end
+
+    StorySaver:NewEvent(eventType, name, questItem.questItemId)
 
     StorySaver.interface:TriggerRefreshData()
 
@@ -276,48 +332,17 @@ function StorySaver:ParseEventId(eventId)
     return timeStamp, eventNumber
 end
 
-function StorySaver:UpdateSchema()
-    if self.accountSavedVariables.zones ~= nil then
-        self.accountSavedVariables.zones = nil
-    end
-
-    if self.characterSavedVariables.events ~= nil then
-        for oldEventId, eventData in pairs(self.characterSavedVariables.events) do
-            local oldEventType = tonumber(string.sub(oldEventId, -1))
-            local name = eventData.name
-            local timeStamp, eventNumber = self:ParseEventId(oldEventId)
-            local eventId = timeStamp .. '-' .. eventNumber
-            local eventType
-            if oldEventType == 1 then
-                eventType = 'dialogues'
-            elseif oldEventType == 2 then
-                eventType = 'subtitles'
-            elseif oldEventType == 3 then
-                eventType = 'books'
-            end
-
-            if self.characterSavedVariables[eventType][name] == nil then
-                self.characterSavedVariables[eventType][name] = {}
-            end
-
-            self.characterSavedVariables[eventType][name][eventId] = eventData
-            self.characterSavedVariables[eventType][name][eventId].name = nil
-        end
-
-        self.characterSavedVariables.events = nil
-    end
-end
-
 function StorySaver:Initialize()
     if self.coreHandleChatterOptionClicked ~= nil or self.coreSetupBook ~= nil or self.coreAddQuestItem ~= nil then
         return
     end
 
     self.eventNumber = 0
-    self.lastSelectedOptionHash = nil
+    self.lastSelectedOptionHash = ''
 
-    self.characterSavedVariables = ZO_SavedVars:New(self.name .. 'SavedVariables', 1, nil, self.characterSavedVariablesDefaults, GetWorldName(), nil)
     self.accountSavedVariables = ZO_SavedVars:NewAccountWide(self.name .. 'SavedVariables', 1, nil, self.accountSavedVariablesDefaults, nil, nil)
+
+    self.events = self.accountSavedVariables.events[self.currentWorldName][self.currentCharacterName]
 
     self.coreHandleChatterOptionClicked = INTERACTION.HandleChatterOptionClicked
     self.coreSetupBook = LORE_READER.SetupBook
@@ -327,7 +352,7 @@ function StorySaver:Initialize()
     LORE_READER.SetupBook = self.OnBook
     ZO_InventoryManager.AddQuestItem = self.OnItem
 
-    self:UpdateSchema()
+    StorySaverOldData:UpdateSchema()
 
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_BEGIN, self.OnDialogue)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CONVERSATION_UPDATED, self.OnDialogue)
