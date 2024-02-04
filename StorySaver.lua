@@ -2,7 +2,8 @@ StorySaver = {}
 
 StorySaver.name = 'StorySaver'
 
-StorySaver.coreHandleChatterOptionClicked = nil
+StorySaver.coreKeyboardHandleChatterOptionClicked = nil
+StorySaver.coreGamepadHandleChatterOptionClicked = nil
 StorySaver.coreSetupBook = nil
 StorySaver.coreAddQuestItem = nil
 StorySaver.interface = nil
@@ -182,7 +183,13 @@ function StorySaver.OnDialogue(...)
     local name = GetUnitName('interact')
 
     --local body, numOptions, atGreeting = GetChatterData()
-    local area = ZO_InteractWindowTargetAreaBodyText
+    local area
+    if not IsInGamepadPreferredMode() then
+        area = ZO_InteractWindowTargetAreaBodyText
+    else
+        area = ZO_InteractWindow_GamepadContainerText
+    end
+
     local body = area:GetText()
     if #body == 0 then
         return
@@ -226,18 +233,27 @@ function StorySaver.OnDialogue(...)
     StorySaver.interface:TriggerRefreshData()
 end
 
-function StorySaver.OnDialogueOptionSelected(obj, area)
+function StorySaver:OnDialogueOptionSelected(body)
     local eventType = 'dialogues'
     local name = GetUnitName('interact')
-    local body = area:GetText()
     local hash = HashString(body) .. '-' .. #body
 
-    local accountCache = StorySaver:GetCache(eventType, name)
+    local accountCache = self:GetCache(eventType, name)
     accountCache[hash] = body
 
-    StorySaver.lastSelectedOptionHash = hash
+    self.lastSelectedOptionHash = hash
+end
 
-    StorySaver.coreHandleChatterOptionClicked(obj, area)
+function StorySaver.OnKeyboardDialogueOptionSelected(obj, area)
+    StorySaver:OnDialogueOptionSelected(area:GetText())
+
+    StorySaver.coreKeyboardHandleChatterOptionClicked(obj, area)
+end
+
+function StorySaver.OnGamepadDialogueOptionSelected(obj, selectedData)
+    StorySaver:OnDialogueOptionSelected(selectedData.optionText)
+
+    StorySaver.coreGamepadHandleChatterOptionClicked(obj, selectedData)
 end
 
 function StorySaver.OnDialogueEnd(...)
@@ -344,11 +360,13 @@ function StorySaver:Initialize()
 
     self.events = self.accountSavedVariables.events[self.currentWorldName][self.currentCharacterName]
 
-    self.coreHandleChatterOptionClicked = INTERACTION.HandleChatterOptionClicked
+    self.coreKeyboardHandleChatterOptionClicked = ZO_Interaction.HandleChatterOptionClicked
+    self.coreGamepadHandleChatterOptionClicked = ZO_GamepadInteraction.HandleChatterOptionClicked
     self.coreSetupBook = LORE_READER.SetupBook
     self.coreAddQuestItem = ZO_InventoryManager.AddQuestItem
 
-    INTERACTION.HandleChatterOptionClicked = self.OnDialogueOptionSelected
+    ZO_Interaction.HandleChatterOptionClicked = self.OnKeyboardDialogueOptionSelected
+    ZO_GamepadInteraction.HandleChatterOptionClicked = self.OnGamepadDialogueOptionSelected
     LORE_READER.SetupBook = self.OnBook
     ZO_InventoryManager.AddQuestItem = self.OnItem
 
