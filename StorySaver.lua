@@ -286,6 +286,8 @@ function StorySaver.OnBook(obj, name, body, medium, showTitle, ...)
     local hash = HashString(body) .. '-' .. #body
 
     if StorySaver:GetEventWithHash(eventType, name, hash) ~= nil then
+        StorySaver.coreSetupBook(obj, name, body, medium, showTitle, ...)
+
         return
     end
 
