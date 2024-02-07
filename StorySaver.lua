@@ -12,10 +12,15 @@ StorySaver.currentWorldName = GetWorldName()
 StorySaver.currentCharacterName = GetUnitName('player')
 
 StorySaver.accountSavedVariablesDefaults = {}
+
+StorySaver.accountSavedVariablesDefaults['settingsAccountWide'] = true
+StorySaver.accountSavedVariablesDefaults['settings'] = StorySaverSettings.defaults
+
 StorySaver.accountSavedVariablesDefaults['cache'] = {}
 StorySaver.accountSavedVariablesDefaults['cache']['dialogues'] = {}
 StorySaver.accountSavedVariablesDefaults['cache']['subtitles'] = {}
 StorySaver.accountSavedVariablesDefaults['cache']['books'] = {}
+
 StorySaver.accountSavedVariablesDefaults['events'] = {}
 
 StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName] = {}
@@ -24,6 +29,8 @@ StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][
 StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['subtitles'] = {}
 StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['books'] = {}
 StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['items'] = {}
+
+StorySaver.characterSavedVariablesDefaults = {}
 
 function StorySaver:GetCache(eventType, name)
     if self.accountSavedVariables.cache[eventType][name] == nil then
@@ -100,7 +107,7 @@ function StorySaver:CleanupCache()
         end
     end
 
-    d(self.name .. ': ' .. string.format(GetString(STORY_SAVER_RECORDS_DELETED_FROM_CACHE), recordsDeleted))
+    d(self.name .. ': ' .. string.format(GetString(STORY_SAVER_CLEANUP_CACHE), recordsDeleted))
 end
 
 function StorySaver:CleanupEventsForName(eventType, name)
@@ -112,15 +119,71 @@ function StorySaver:CleanupEventsForName(eventType, name)
 end
 
 function StorySaver:CleanupEvents()
-    for eventType, events in pairs(self.events) do
-        for name, _ in pairs(events) do
+    for eventType, names in pairs(self.events) do
+        for name, _ in pairs(names) do
             self:CleanupEventsForName(eventType, name)
         end
     end
 end
 
-function StorySaver:RemoveEvent(eventType, name, eventId)
+function StorySaver:OptimizeStorage()
+    StorySaver:CleanupEvents()
+    StorySaver:CleanupCache()
+end
+
+function StorySaver:DeleteEvent(eventType, name, eventId)
     self.events[eventType][name][eventId] = nil
+end
+
+function StorySaver:DeleteOldData()
+    local eventsDeleted = 0
+
+    local currentTimeStamp = GetTimeStamp()
+
+    for eventType, names in pairs(self.events) do
+        local days
+        if eventType == 'dialogues' then
+            days = StorySaverSettings.values.deleteDialoguesOlderThan
+        elseif eventType == 'subtitles' then
+            days = StorySaverSettings.values.deleteSubtitlesOlderThan
+        elseif eventType == 'books' then
+            days = StorySaverSettings.values.deleteBooksOlderThan
+        elseif eventType == 'items' then
+            days = StorySaverSettings.values.deleteItemsOlderThan
+        end
+
+        if days > 0 then
+            local seconds = days * 24 * 60 * 60
+
+            for name, eventIds in pairs(names) do
+                for eventId, eventData in pairs(eventIds) do
+                    local timeStamp, _ = self:ParseEventId(eventId)
+                    timeStamp = tonumber(timeStamp)
+                    if eventType == 'dialogues' and StorySaverSettings.values.useOptionsDates then
+                        for _, data in pairs(eventData.selectedOptionHashes) do
+                            if data.timeStamp > timeStamp then
+                                timeStamp = data.timeStamp
+                            end
+                        end
+
+                        for _, data in pairs(eventData.optionHashes) do
+                            if data.timeStamp > timeStamp then
+                                timeStamp = data.timeStamp
+                            end
+                        end
+                    end
+
+                    if currentTimeStamp - timeStamp > seconds then
+                        self:DeleteEvent(eventType, name, eventId)
+
+                        eventsDeleted = eventsDeleted + 1
+                    end
+                end
+            end
+        end
+    end
+
+    d(self.name .. ': ' .. string.format(GetString(STORY_SAVER_CLEANUP_EVENTS), eventsDeleted))
 end
 
 function StorySaver:NewEvent(eventType, name, hash)
@@ -359,6 +422,7 @@ function StorySaver:Initialize()
     self.lastSelectedOptionHash = ''
 
     self.accountSavedVariables = ZO_SavedVars:NewAccountWide(self.name .. 'SavedVariables', 1, nil, self.accountSavedVariablesDefaults, nil, nil)
+    self.characterSavedVariables = ZO_SavedVars:New(self.name .. 'SavedVariables', 1, nil, self.characterSavedVariablesDefaults, GetWorldName(), nil)
 
     self.events = self.accountSavedVariables.events[self.currentWorldName][self.currentCharacterName]
 
@@ -374,6 +438,8 @@ function StorySaver:Initialize()
 
     StorySaverOldData:UpdateSchema()
 
+    StorySaverSettings:SetupPanel()
+
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_BEGIN, self.OnDialogue)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CONVERSATION_UPDATED, self.OnDialogue)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_OFFERED, self.OnDialogue)
@@ -381,6 +447,14 @@ function StorySaver:Initialize()
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_END, self.OnDialogueEnd)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_COMPLETE, self.OnDialogueEnd)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHAT_MESSAGE_CHANNEL, self.OnSubtitle)
+
+    if StorySaverSettings.values.deleteOn == 'load' then
+        self:DeleteOldData()
+    end
+
+    if StorySaverSettings.values.optimizeOn == 'load' then
+        self:OptimizeStorage()
+    end
 
     self.interface = ZO_SortFilterList.New(StorySaverInterface, StorySaverEventListFrame)
     self.interface:InitializeInterface()

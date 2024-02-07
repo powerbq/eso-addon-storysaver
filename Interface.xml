@@ -41,7 +41,7 @@
                     <Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="TOPRIGHT" offsetX="-40"/>
                     <Dimensions y="40"/>
                     <Controls>
-                        <Label name="$(parent)FilterLabel" font="ZoFontGameLargeBold" text="STORY_SAVER_FILTER">
+                        <Label name="$(parent)FilterLabel" font="ZoFontGameLargeBold" text="STORY_SAVER_INTERFACE_FILTER">
                             <Anchor point="LEFT"/>
                         </Label>
                         <Button name="$(parent)Dialogues">
@@ -72,8 +72,14 @@
                                 StorySaverInterface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_inventory_')
                             </OnInitialized>
                         </Button>
-                        <Backdrop name="$(parent)Search" inherits="ZO_EditBackdrop">
+                        <Button name="$(parent)Settings" clickSound="Click">
                             <Anchor point="RIGHT"/>
+                            <Dimensions y="40" x="40"/>
+                            <Textures normal="EsoUI/Art/ChatWindow/chat_options_up.dds" pressed="EsoUI/Art/ChatWindow/chat_options_down.dds" mouseOver="EsoUI/Art/ChatWindow/chat_options_over.dds"/>
+                            <OnClicked>LibAddonMenu2:OpenToPanel(StorySaverSettings.panel)</OnClicked>
+                        </Button>
+                        <Backdrop name="$(parent)Search" inherits="ZO_EditBackdrop">
+                            <Anchor point="RIGHT" relativeTo="$(parent)Settings" relativePoint="LEFT" offsetX="-5"/>
                             <Dimensions x="200"/>
                             <Controls>
                                 <EditBox name="$(parent)Box" inherits="ZO_DefaultEditForBackdrop ZO_EditDefaultText">
@@ -83,7 +89,7 @@
                                 </EditBox>
                             </Controls>
                         </Backdrop>
-                        <Label name="$(parent)SearchLabel" font="ZoFontGameLargeBold" text="STORY_SAVER_SEARCH">
+                        <Label name="$(parent)SearchLabel" font="ZoFontGameLargeBold" text="STORY_SAVER_INTERFACE_SEARCH">
                             <Anchor point="RIGHT" relativeTo="$(parent)Search" relativePoint="LEFT" offsetX="-5"/>
                         </Label>
                         <Label name="$(parent)Result" font="ZoFontGameLargeBold" horizontalAlignment="CENTER" wrapMode="ELLIPSIS">
@@ -99,21 +105,21 @@
                     <Controls>
                         <Control name="$(parent)Name" inherits="ZO_SortHeader">
                             <OnInitialized>
-                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_NAME), 'name', ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, 'ZoFontGameLargeBold')
+                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_INTERFACE_NAME), 'name', ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, 'ZoFontGameLargeBold')
                             </OnInitialized>
                             <Anchor point="LEFT" offsetX="40"/>
                             <Dimensions x="100" y="40"/>
                         </Control>
                         <Control name="$(parent)Zone" inherits="ZO_SortHeader">
                             <OnInitialized>
-                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_ZONE), 'zoneName', ZO_SORT_ORDER_UP, TEXT_ALIGN_RIGHT, 'ZoFontGameLargeBold')
+                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_INTERFACE_ZONE), 'zoneName', ZO_SORT_ORDER_UP, TEXT_ALIGN_RIGHT, 'ZoFontGameLargeBold')
                             </OnInitialized>
                             <Anchor point="RIGHT" offsetX="-160"/>
                             <Dimensions x="100" y="40"/>
                         </Control>
                         <Control name="$(parent)When" inherits="ZO_SortHeader">
                             <OnInitialized>
-                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_WHEN), 'eventId', ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, 'ZoFontGameLargeBold')
+                                ZO_SortHeader_Initialize(self, GetString(STORY_SAVER_INTERFACE_WHEN), 'eventId', ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, 'ZoFontGameLargeBold')
                             </OnInitialized>
                             <Anchor point="RIGHT" offsetX="-10"/>
                             <Dimensions x="100" y="40"/>

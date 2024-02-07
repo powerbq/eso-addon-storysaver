@@ -3,6 +3,8 @@ ZO_CreateStringId('SI_WINDOW_TITLE_STORY_SAVER', 'Story Saver')
 
 StorySaverInterface = ZO_SortFilterList:Subclass()
 
+StorySaverInterface.showDeleteSelected = false
+
 function StorySaverInterface:InitializeInterface()
     self.scrollData = ZO_ScrollList_GetDataList(self.list)
 
@@ -26,19 +28,21 @@ function StorySaverInterface:InitializeInterface()
         return zo_plainstrfind(data.body:lower(), search)
     end)
 
-    ESO_Dialogs['StorySaverDeduplicationDialog'] = {
+    ESO_Dialogs['StorySaverDeleteSelectedDialog'] = {
         title = {
-            text = GetString(STORY_SAVER_OPTIMIZE_STORAGE),
+            text = GetString(STORY_SAVER_INTERFACE_DELETE_SELECTED),
         },
         mainText = {
-            text = GetString(STORY_SAVER_CONFIRM),
+            text = GetString(STORY_SAVER_INTERFACE_CONFIRM),
         },
         buttons = {
             [1] = {
                 text = SI_DIALOG_CONFIRM,
                 callback = function(...)
-                    StorySaver:CleanupEvents()
-                    StorySaver:CleanupCache()
+                    for _, row in ipairs(self.scrollData) do
+                        StorySaver:DeleteEvent(row.data.eventType, row.data.name, row.data.eventId)
+                    end
+                    self:RefreshData()
                 end,
             },
             [2] = {
@@ -47,18 +51,18 @@ function StorySaverInterface:InitializeInterface()
         },
     }
 
-    ESO_Dialogs['StorySaverRemoveRecordDialog'] = {
+    ESO_Dialogs['StorySaverDeleteRecordDialog'] = {
         title = {
-            text = GetString(STORY_SAVER_REMOVE),
+            text = GetString(STORY_SAVER_INTERFACE_DELETE_RECORD),
         },
         mainText = {
-            text = GetString(STORY_SAVER_CONFIRM),
+            text = GetString(STORY_SAVER_INTERFACE_CONFIRM),
         },
         buttons = {
             [1] = {
                 text = SI_DIALOG_CONFIRM,
                 callback = function(dialog)
-                    StorySaver:RemoveEvent(dialog.data.eventType, dialog.data.name, dialog.data.eventId)
+                    StorySaver:DeleteEvent(dialog.data.eventType, dialog.data.name, dialog.data.eventId)
                     self:RefreshData()
                 end,
             },
@@ -73,17 +77,20 @@ function StorySaverInterface:InitializeInterface()
             alignment = KEYBIND_STRIP_ALIGN_LEFT,
             keybind = 'UI_SHORTCUT_SECONDARY',
             name = function()
-                return GetString(STORY_SAVER_OPTIMIZE_STORAGE)
+                return GetString(STORY_SAVER_INTERFACE_DELETE_SELECTED)
+            end,
+            visible = function()
+                return self.showDeleteSelected
             end,
             callback = function()
-                ZO_Dialogs_ShowDialog('StorySaverDeduplicationDialog')
+                ZO_Dialogs_ShowDialog('StorySaverDeleteSelectedDialog')
             end,
         },
         {
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             keybind = 'UI_SHORTCUT_PRIMARY',
             name = function()
-                return GetString(STORY_SAVER_READ)
+                return GetString(STORY_SAVER_INTERFACE_READ)
             end,
             visible = function()
                 return self.mouseOverRow and self.mouseOverRow.data.eventType == 'books'
@@ -96,7 +103,7 @@ function StorySaverInterface:InitializeInterface()
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             keybind = 'UI_SHORTCUT_SHOW_QUEST_ON_MAP',
             name = function()
-                return GetString(STORY_SAVER_MAP)
+                return GetString(STORY_SAVER_INTERFACE_SHOW_ON_MAP)
             end,
             visible = function()
                 return self.mouseOverRow
@@ -109,13 +116,13 @@ function StorySaverInterface:InitializeInterface()
             alignment = KEYBIND_STRIP_ALIGN_RIGHT,
             keybind = 'UI_SHORTCUT_NEGATIVE',
             name = function()
-                return GetString(STORY_SAVER_REMOVE)
+                return GetString(STORY_SAVER_INTERFACE_DELETE_RECORD)
             end,
             visible = function()
                 return self.mouseOverRow
             end,
             callback = function()
-                ZO_Dialogs_ShowDialog('StorySaverRemoveRecordDialog', self.mouseOverRow.data)
+                ZO_Dialogs_ShowDialog('StorySaverDeleteRecordDialog', self.mouseOverRow.data)
             end,
         },
     }
@@ -176,7 +183,7 @@ function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
             body = body .. '\r\n'
         end
         body = body .. line
-        if withDate then
+        if withDate and StorySaverSettings.values.showOptionDate then
             body = body .. ' [' .. self:GetDateStringFromTimestamp(data.timeStamp) .. ']'
         end
     end
@@ -194,6 +201,10 @@ function StorySaverInterface:FilterScrollList()
     local showBooks = GetControl(filterAndSearchControl, 'Books').checked
     local showItems = GetControl(filterAndSearchControl, 'Items').checked
     local search = GetControl(GetControl(filterAndSearchControl, 'Search'), 'Box'):GetText():lower()
+
+    StorySaver.interface.showDeleteSelected = search ~= ''
+    self:RemoveKeybinds()
+    self:AddKeybinds()
 
     local resultControl = GetControl(filterAndSearchControl, 'Result')
 
@@ -246,7 +257,7 @@ function StorySaverInterface:FilterScrollList()
         end
     end
 
-    resultControl:SetText(string.format(GetString(STORY_SAVER_RESULT), #self.scrollData, #self.masterList))
+    resultControl:SetText(string.format(GetString(STORY_SAVER_INTERFACE_RESULT), #self.scrollData, #self.masterList))
 end
 
 function StorySaverInterface:BuildMasterList()

@@ -10,12 +10,13 @@
 ## APIVersion: 101040
 ## SavedVariables: StorySaverSavedVariables
 ## OptionalDependsOn: LibMapPing
-## DependsOn: LibGPS>=65
+## DependsOn: LibGPS>=65 LibAddonMenu-2.0>=30
 
 lang/en.lua
 lang/$(language).lua
 
 OldData.lua
+Settings.lua
 StorySaver.lua
 
 Interface.lua

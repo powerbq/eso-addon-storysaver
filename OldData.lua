@@ -19,7 +19,7 @@ function StorySaverOldData:CombineDialogueOptions(name, targetEventId)
                 end
             end
 
-            StorySaver:RemoveEvent('dialogues', name, eventId)
+            StorySaver:DeleteEvent('dialogues', name, eventId)
         end
     end
 end
@@ -70,7 +70,7 @@ function StorySaverOldData:OptimizeOthers()
 
             for _, eventId in ipairs(keys) do
                 if self:IsEventDuplicate(eventType, name, eventId) then
-                    StorySaver:RemoveEvent(eventType, name, eventId)
+                    StorySaver:DeleteEvent(eventType, name, eventId)
                 end
             end
         end
@@ -82,10 +82,8 @@ function StorySaverOldData:UpdateSchemaV1()
         StorySaver.accountSavedVariables.zones = nil
     end
 
-    local characterSavedVariables = ZO_SavedVars:New(StorySaver.name .. 'SavedVariables', 1, nil, nil, GetWorldName(), nil)
-
-    if characterSavedVariables.events ~= nil then
-        for oldEventId, eventData in pairs(characterSavedVariables.events) do
+    if StorySaver.characterSavedVariables.events ~= nil then
+        for oldEventId, eventData in pairs(StorySaver.characterSavedVariables.events) do
             local oldEventType = tonumber(string.sub(oldEventId, -1))
             local name = eventData.name
             local timeStamp, eventNumber = StorySaver:ParseEventId(oldEventId)
@@ -99,15 +97,15 @@ function StorySaverOldData:UpdateSchemaV1()
                 eventType = 'books'
             end
 
-            if characterSavedVariables[eventType][name] == nil then
-                characterSavedVariables[eventType][name] = {}
+            if StorySaver.characterSavedVariables[eventType][name] == nil then
+                StorySaver.characterSavedVariables[eventType][name] = {}
             end
 
-            characterSavedVariables[eventType][name][eventId] = eventData
-            characterSavedVariables[eventType][name][eventId].name = nil
+            StorySaver.characterSavedVariables[eventType][name][eventId] = eventData
+            StorySaver.characterSavedVariables[eventType][name][eventId].name = nil
         end
 
-        characterSavedVariables.events = nil
+        StorySaver.characterSavedVariables.events = nil
     end
 end
 
@@ -127,11 +125,9 @@ function StorySaverOldData:UpdateSchemaV2()
         StorySaver.accountSavedVariables.books = nil
     end
 
-    local characterSavedVariables = ZO_SavedVars:New(StorySaver.name .. 'SavedVariables', 1, nil, nil, GetWorldName(), nil)
-
-    if characterSavedVariables.dialogues ~= nil then
-        StorySaver.events.dialogues = characterSavedVariables.dialogues
-        characterSavedVariables.dialogues = nil
+    if StorySaver.characterSavedVariables.dialogues ~= nil then
+        StorySaver.events.dialogues = StorySaver.characterSavedVariables.dialogues
+        StorySaver.characterSavedVariables.dialogues = nil
 
         for _, dialogueEvents in pairs(StorySaver.events.dialogues) do
             for eventId, eventData in pairs(dialogueEvents) do
@@ -170,19 +166,19 @@ function StorySaverOldData:UpdateSchemaV2()
         self:OptimizeOthers()
     end
 
-    if characterSavedVariables.subtitles ~= nil then
-        StorySaver.events.subtitles = characterSavedVariables.subtitles
-        characterSavedVariables.subtitles = nil
+    if StorySaver.characterSavedVariables.subtitles ~= nil then
+        StorySaver.events.subtitles = StorySaver.characterSavedVariables.subtitles
+        StorySaver.characterSavedVariables.subtitles = nil
     end
 
-    if characterSavedVariables.books ~= nil then
-        StorySaver.events.books = characterSavedVariables.books
-        characterSavedVariables.books = nil
+    if StorySaver.characterSavedVariables.books ~= nil then
+        StorySaver.events.books = StorySaver.characterSavedVariables.books
+        StorySaver.characterSavedVariables.books = nil
     end
 
-    if characterSavedVariables.items ~= nil then
-        StorySaver.events.items = characterSavedVariables.items
-        characterSavedVariables.items = nil
+    if StorySaver.characterSavedVariables.items ~= nil then
+        StorySaver.events.items = StorySaver.characterSavedVariables.items
+        StorySaver.characterSavedVariables.items = nil
     end
 end
 
