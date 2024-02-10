@@ -139,10 +139,10 @@ function StorySaverOldData:UpdateSchemaV2()
                 eventData.selectedOptionHash = nil
                 if selectedOptionHash ~= nil then
                     eventData.selectedOptionHashes[selectedOptionHash] = {}
-                    eventData.selectedOptionHashes[selectedOptionHash]['timeStamp'] = timeStamp
+                    eventData.selectedOptionHashes[selectedOptionHash]['timeStamp'] = tonumber(timeStamp)
                 else
                     eventData.selectedOptionHashes[''] = {}
-                    eventData.selectedOptionHashes['']['timeStamp'] = timeStamp
+                    eventData.selectedOptionHashes['']['timeStamp'] = tonumber(timeStamp)
                 end
 
                 local oldOptionHashes = eventData.optionHashes
@@ -152,7 +152,7 @@ function StorySaverOldData:UpdateSchemaV2()
                     local optionHash = oldOptionHashes[i]
 
                     eventData.optionHashes[optionHash] = {}
-                    eventData.optionHashes[optionHash]['timeStamp'] = timeStamp
+                    eventData.optionHashes[optionHash]['timeStamp'] = tonumber(timeStamp)
                     if selectedOptionHash ~= nil then
                         eventData.optionHashes[optionHash]['type'] = CHATTER_TALK_CHOICE
                     else

@@ -159,14 +159,23 @@ function StorySaver:DeleteOldData()
                 for eventId, eventData in pairs(eventIds) do
                     local timeStamp, _ = self:ParseEventId(eventId)
                     timeStamp = tonumber(timeStamp)
+
                     if eventType == 'dialogues' and StorySaverSettings.values.useOptionsDates then
                         for _, data in pairs(eventData.selectedOptionHashes) do
+                            if (data.timeStamp ~= tonumber(data.timeStamp)) then
+                                data.timeStamp = tonumber(data.timeStamp)
+                            end
+
                             if data.timeStamp > timeStamp then
                                 timeStamp = data.timeStamp
                             end
                         end
 
                         for _, data in pairs(eventData.optionHashes) do
+                            if (data.timeStamp ~= tonumber(data.timeStamp)) then
+                                data.timeStamp = tonumber(data.timeStamp)
+                            end
+
                             if data.timeStamp > timeStamp then
                                 timeStamp = data.timeStamp
                             end
