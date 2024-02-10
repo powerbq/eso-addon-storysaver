@@ -202,10 +202,6 @@ function StorySaverInterface:FilterScrollList()
     local showItems = GetControl(filterAndSearchControl, 'Items').checked
     local search = GetControl(GetControl(filterAndSearchControl, 'Search'), 'Box'):GetText():lower()
 
-    StorySaver.interface.showDeleteSelected = search ~= ''
-    self:RemoveKeybinds()
-    self:AddKeybinds()
-
     local resultControl = GetControl(filterAndSearchControl, 'Result')
 
     for _, row in pairs(self.masterList) do
@@ -258,6 +254,19 @@ function StorySaverInterface:FilterScrollList()
     end
 
     resultControl:SetText(string.format(GetString(STORY_SAVER_INTERFACE_RESULT), #self.scrollData, #self.masterList))
+
+    self.showDeleteSelected = #self.scrollData ~= #self.masterList
+            or search ~= ''
+            or not showDialogues
+            or not showSubtitles
+            or not showBooks
+            or not showItems
+    if self.showDeleteSelected then
+        self.showDeleteSelected = #self.scrollData > 0
+    end
+
+    self:RemoveKeybinds()
+    self:AddKeybinds()
 end
 
 function StorySaverInterface:BuildMasterList()
