@@ -2,35 +2,7 @@ StorySaver = {}
 
 StorySaver.name = 'StorySaver'
 
-StorySaver.coreKeyboardHandleChatterOptionClicked = nil
-StorySaver.coreGamepadHandleChatterOptionClicked = nil
-StorySaver.coreSetupBook = nil
-StorySaver.coreAddQuestItem = nil
-StorySaver.interface = nil
-
-StorySaver.currentWorldName = GetWorldName()
-StorySaver.currentCharacterName = GetUnitName('player')
-
-StorySaver.accountSavedVariablesDefaults = {}
-
-StorySaver.accountSavedVariablesDefaults['settingsAccountWide'] = true
-StorySaver.accountSavedVariablesDefaults['settings'] = StorySaverSettings.defaults
-
-StorySaver.accountSavedVariablesDefaults['cache'] = {}
-StorySaver.accountSavedVariablesDefaults['cache']['dialogues'] = {}
-StorySaver.accountSavedVariablesDefaults['cache']['subtitles'] = {}
-StorySaver.accountSavedVariablesDefaults['cache']['books'] = {}
-
-StorySaver.accountSavedVariablesDefaults['events'] = {}
-
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName] = {}
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName] = {}
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['dialogues'] = {}
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['subtitles'] = {}
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['books'] = {}
-StorySaver.accountSavedVariablesDefaults['events'][StorySaver.currentWorldName][StorySaver.currentCharacterName]['items'] = {}
-
-StorySaver.characterSavedVariablesDefaults = {}
+StorySaver.initialized = false
 
 function StorySaver:GetCache(eventType, name)
     if self.accountSavedVariables.cache[eventType][name] == nil then
@@ -135,6 +107,20 @@ function StorySaver:DeleteEvent(eventType, name, eventId)
     self.events[eventType][name][eventId] = nil
 end
 
+function StorySaver:ParseEventId(eventId)
+    local timeStamp, eventNumber
+
+    for part in eventId:gmatch('([^-]+)') do
+        if timeStamp == nil then
+            timeStamp = part
+        elseif eventNumber == nil then
+            eventNumber = tonumber(part)
+        end
+    end
+
+    return timeStamp, eventNumber
+end
+
 function StorySaver:DeleteOldData()
     local eventsDeleted = 0
 
@@ -237,75 +223,32 @@ function StorySaver:GetEventWithHash(eventType, name, hash)
     return nil
 end
 
-function StorySaver.GetOptionTypes()
-    local optionTypes = {}
-
-    for i = 1, GetChatterOptionCount() do
-        local optionType
-        _, optionType = GetChatterOption(i)
-
-        optionTypes[optionType] = true
-    end
-
-    return optionTypes
-end
-
-function StorySaver.OnDialogue(...)
-    local eventType = 'dialogues'
-    local name = GetUnitName('interact')
-
-    --local body, numOptions, atGreeting = GetChatterData()
-    local area
-    if not IsInGamepadPreferredMode() then
-        area = ZO_InteractWindowTargetAreaBodyText
-    else
-        area = ZO_InteractWindow_GamepadContainerText
-    end
-
-    local body = area:GetText()
-    if #body == 0 then
-        return
-    end
-    local hash = HashString(body) .. '-' .. #body
-
-    local optionTypes = StorySaver.GetOptionTypes()
-    if optionTypes[CHATTER_START_TRADINGHOUSE] and not optionTypes[CHATTER_START_BANK] then
+function StorySaver:ProcessPopulateChatterOption(optionText, optionType)
+    if optionText == GetString(SI_GOODBYE) then
         return
     end
 
-    local accountCache = StorySaver:GetCache(eventType, name)
-    accountCache[hash] = body
+    self.lastOptionTypes[optionType] = true
 
-    local eventData = StorySaver:GetEventWithHash(eventType, name, hash)
-    if eventData == nil then
-        eventData = StorySaver:NewEvent(eventType, name, hash)
-    end
-
-    if eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash] == nil then
-        eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash] = {}
-        eventData.selectedOptionHashes[StorySaver.lastSelectedOptionHash]['timeStamp'] = GetTimeStamp()
-    end
-    StorySaver.lastSelectedOptionHash = ''
-
-    for i = 1, GetChatterOptionCount() do
-        local optionType
-        body, optionType = GetChatterOption(i)
-        hash = HashString(body) .. '-' .. #body
-
-        accountCache = StorySaver:GetCache(eventType, name)
-        accountCache[hash] = body
-
-        if eventData.optionHashes[hash] == nil then
-            eventData.optionHashes[hash] = {}
-            eventData.optionHashes[hash]['type'] = optionType
-            eventData.optionHashes[hash]['timeStamp'] = GetTimeStamp()
-        end
-    end
-
-    StorySaver.interface:TriggerRefreshData()
+    table.insert(self.lastOptions, {
+        body = optionText,
+        type = optionType
+    })
 end
 
-function StorySaver:OnDialogueOptionSelected(body)
+function StorySaver.KeyboardPopulateChatterOption(obj, arg1, arg2, optionText, optionType, ...)
+    StorySaver:ProcessPopulateChatterOption(optionText, optionType)
+
+    StorySaver.coreKeyboardPopulateChatterOption(obj, arg1, arg2, optionText, optionType, ...)
+end
+
+function StorySaver.GamepadPopulateChatterOption(obj, arg1, arg2, optionText, optionType, ...)
+    StorySaver:ProcessPopulateChatterOption(optionText, optionType)
+
+    StorySaver.coreGamepadPopulateChatterOption(obj, arg1, arg2, optionText, optionType, ...)
+end
+
+function StorySaver:ProcessHandleChatterOptionClicked(body)
     local eventType = 'dialogues'
     local name = GetUnitName('interact')
     local hash = HashString(body) .. '-' .. #body
@@ -316,50 +259,23 @@ function StorySaver:OnDialogueOptionSelected(body)
     self.lastSelectedOptionHash = hash
 end
 
-function StorySaver.OnKeyboardDialogueOptionSelected(obj, area)
-    StorySaver:OnDialogueOptionSelected(area:GetText())
+function StorySaver.KeyboardHandleChatterOptionClicked(obj, area)
+    StorySaver:ProcessHandleChatterOptionClicked(area.optionText)
 
     StorySaver.coreKeyboardHandleChatterOptionClicked(obj, area)
 end
 
-function StorySaver.OnGamepadDialogueOptionSelected(obj, selectedData)
-    StorySaver:OnDialogueOptionSelected(selectedData.optionText)
+function StorySaver.GamepadHandleChatterOptionClicked(obj, selectedData)
+    StorySaver:ProcessHandleChatterOptionClicked(selectedData.optionText)
 
     StorySaver.coreGamepadHandleChatterOptionClicked(obj, selectedData)
 end
 
-function StorySaver.OnDialogueEnd(...)
-    StorySaver.lastSelectedOptionHash = ''
-end
-
-function StorySaver.OnSubtitle(arg1, msgType, from, body)
-    if msgType ~= CHAT_CHANNEL_MONSTER_EMOTE and msgType ~= CHAT_CHANNEL_MONSTER_SAY and msgType ~= CHAT_CHANNEL_MONSTER_WHISPER and msgType ~= CHAT_CHANNEL_MONSTER_YELL then
-        return
-    end
-
-    local eventType = 'subtitles'
-    local name = zo_strformat('<<C:1>>', from)
-    local hash = HashString(body) .. '-' .. #body
-
-    if StorySaver:GetEventWithHash(eventType, name, hash) ~= nil then
-        return
-    end
-
-    local accountCache = StorySaver:GetCache(eventType, name)
-    accountCache[hash] = body
-
-    StorySaver:NewEvent(eventType, name, hash)
-
-    StorySaver.interface:TriggerRefreshData()
-end
-
-function StorySaver.OnBook(obj, name, body, medium, showTitle, ...)
+function StorySaver:ProcessSetupBook(name, body, medium, showTitle)
     local eventType = 'books'
     local hash = HashString(body) .. '-' .. #body
 
-    if StorySaver:GetEventWithHash(eventType, name, hash) ~= nil then
-        StorySaver.coreSetupBook(obj, name, body, medium, showTitle, ...)
-
+    if self:GetEventWithHash(eventType, name, hash) ~= nil then
         return
     end
 
@@ -381,69 +297,198 @@ function StorySaver.OnBook(obj, name, body, medium, showTitle, ...)
 
     parts[i] = part:sub(1, #part - 1)
 
-    local accountCache = StorySaver:GetCache(eventType, name)
+    local accountCache = self:GetCache(eventType, name)
     accountCache[hash] = parts
 
-    local eventData = StorySaver:NewEvent(eventType, name, hash)
+    local eventData = self:NewEvent(eventType, name, hash)
     eventData.medium = medium
     eventData.showTitle = showTitle
 
-    StorySaver.interface:TriggerRefreshData()
+    self.interface:TriggerRefreshData()
+end
+
+function StorySaver.SetupBook(obj, name, body, medium, showTitle, ...)
+    StorySaver:ProcessSetupBook(name, body, medium, showTitle)
 
     StorySaver.coreSetupBook(obj, name, body, medium, showTitle, ...)
 end
 
-function StorySaver.OnItem(obj, questItem, ...)
+function StorySaver:ProcessAddQuestItem(questItem)
     local eventType = 'items'
     local name = questItem.name
 
-    if StorySaver:GetEventWithHash(eventType, name, questItem.questItemId) ~= nil then
+    if self:GetEventWithHash(eventType, name, questItem.questItemId) ~= nil then
         return
     end
 
-    StorySaver:NewEvent(eventType, name, questItem.questItemId)
+    self:NewEvent(eventType, name, questItem.questItemId)
 
-    StorySaver.interface:TriggerRefreshData()
+    self.interface:TriggerRefreshData()
+end
+
+function StorySaver.AddQuestItem(obj, questItem, ...)
+    StorySaver:ProcessAddQuestItem(questItem)
 
     StorySaver.coreAddQuestItem(obj, questItem, ...)
 end
 
-function StorySaver:ParseEventId(eventId)
-    local timeStamp, eventNumber
-
-    for part in eventId:gmatch('([^-]+)') do
-        if timeStamp == nil then
-            timeStamp = part
-        elseif eventNumber == nil then
-            eventNumber = tonumber(part)
-        end
-    end
-
-    return timeStamp, eventNumber
+function StorySaver:ResetLastData()
+    self.lastOptions = {}
+    self.lastOptionTypes = {}
+    self.lastSelectedOptionHash = ''
 end
 
-function StorySaver:Initialize()
-    if self.coreHandleChatterOptionClicked ~= nil or self.coreSetupBook ~= nil or self.coreAddQuestItem ~= nil then
+function StorySaver:ProcessDialogue()
+    local eventType = 'dialogues'
+    local name = GetUnitName('interact')
+
+    local area
+    if not IsInGamepadPreferredMode() then
+        area = ZO_InteractWindowTargetAreaBodyText
+    else
+        area = ZO_InteractWindow_GamepadContainerText
+    end
+
+    local body = area:GetText()
+    if #body == 0 then
+        self:ResetLastData()
+
+        return
+    end
+    local hash = HashString(body) .. '-' .. #body
+
+    if self.lastOptionTypes[CHATTER_START_TRADINGHOUSE] and not self.lastOptionTypes[CHATTER_START_BANK] then
+        self:ResetLastData()
+
         return
     end
 
+    local accountCache = self:GetCache(eventType, name)
+    accountCache[hash] = body
+
+    local eventData = self:GetEventWithHash(eventType, name, hash)
+    if eventData == nil then
+        eventData = self:NewEvent(eventType, name, hash)
+    end
+
+    if eventData.selectedOptionHashes[self.lastSelectedOptionHash] == nil then
+        eventData.selectedOptionHashes[self.lastSelectedOptionHash] = {}
+        eventData.selectedOptionHashes[self.lastSelectedOptionHash]['timeStamp'] = GetTimeStamp()
+    end
+
+    for _, option in pairs(self.lastOptions) do
+        hash = HashString(option.body) .. '-' .. #option.body
+
+        accountCache = self:GetCache(eventType, name)
+        accountCache[hash] = option.body
+
+        if eventData.optionHashes[hash] == nil then
+            eventData.optionHashes[hash] = {}
+            eventData.optionHashes[hash]['type'] = option.type
+            eventData.optionHashes[hash]['timeStamp'] = GetTimeStamp()
+        end
+    end
+
+    self:ResetLastData()
+
+    self.interface:TriggerRefreshData()
+end
+
+function StorySaver.OnDialogue(...)
+    StorySaver:ProcessDialogue()
+end
+
+function StorySaver:ProcessDialogueEnd()
+    self:ResetLastData()
+end
+
+function StorySaver.OnDialogueEnd(...)
+    StorySaver:ProcessDialogueEnd()
+end
+
+function StorySaver:ProcessSubtitle(msgType, from, body)
+    if msgType ~= CHAT_CHANNEL_MONSTER_EMOTE and msgType ~= CHAT_CHANNEL_MONSTER_SAY and msgType ~= CHAT_CHANNEL_MONSTER_WHISPER and msgType ~= CHAT_CHANNEL_MONSTER_YELL then
+        return
+    end
+
+    local eventType = 'subtitles'
+    local name = zo_strformat('<<C:1>>', from)
+    local hash = HashString(body) .. '-' .. #body
+
+    if self:GetEventWithHash(eventType, name, hash) ~= nil then
+        return
+    end
+
+    local accountCache = self:GetCache(eventType, name)
+    accountCache[hash] = body
+
+    self:NewEvent(eventType, name, hash)
+
+    self.interface:TriggerRefreshData()
+end
+
+function StorySaver.OnSubtitle(_, msgType, from, body)
+    StorySaver:ProcessSubtitle(msgType, from, body)
+end
+
+function StorySaver:GetAccountSavedVariablesDefaults(worldName, characterName)
+    local defaults = {
+        settingsAccountWide = true,
+        settings = StorySaverSettings.defaults,
+        cache = {
+            dialogues = {},
+            subtitles = {},
+            books = {},
+        },
+        events = {}
+    }
+
+    defaults.events[worldName] = {}
+    defaults.events[worldName][characterName] = {}
+
+    local eventTypes = { 'dialogues', 'subtitles', 'books', 'items' }
+    for _, eventType in pairs(eventTypes) do
+        defaults.events[worldName][characterName][eventType] = {}
+    end
+
+    return defaults
+end
+
+function StorySaver:GetCharacterSavedVariablesDefaults()
+    local defaults = {}
+
+    return defaults
+end
+
+function StorySaver:Initialize()
+    if self.initialized then
+        return
+    end
+
+    self:ResetLastData()
+
     self.eventNumber = 0
-    self.lastSelectedOptionHash = ''
 
-    self.accountSavedVariables = ZO_SavedVars:NewAccountWide(self.name .. 'SavedVariables', 1, nil, self.accountSavedVariablesDefaults, nil, nil)
-    self.characterSavedVariables = ZO_SavedVars:New(self.name .. 'SavedVariables', 1, nil, self.characterSavedVariablesDefaults, GetWorldName(), nil)
+    local worldName, characterName = GetWorldName(), GetUnitName('player')
 
-    self.events = self.accountSavedVariables.events[self.currentWorldName][self.currentCharacterName]
+    self.accountSavedVariables = ZO_SavedVars:NewAccountWide(self.name .. 'SavedVariables', 1, nil, self:GetAccountSavedVariablesDefaults(worldName, characterName), nil, nil)
+    self.characterSavedVariables = ZO_SavedVars:New(self.name .. 'SavedVariables', 1, nil, self:GetCharacterSavedVariablesDefaults(), worldName, nil)
 
+    self.events = self.accountSavedVariables.events[worldName][characterName]
+
+    self.coreKeyboardPopulateChatterOption = ZO_Interaction.PopulateChatterOption
+    self.coreGamepadPopulateChatterOption = ZO_GamepadInteraction.PopulateChatterOption
     self.coreKeyboardHandleChatterOptionClicked = ZO_Interaction.HandleChatterOptionClicked
     self.coreGamepadHandleChatterOptionClicked = ZO_GamepadInteraction.HandleChatterOptionClicked
     self.coreSetupBook = LORE_READER.SetupBook
     self.coreAddQuestItem = ZO_InventoryManager.AddQuestItem
 
-    ZO_Interaction.HandleChatterOptionClicked = self.OnKeyboardDialogueOptionSelected
-    ZO_GamepadInteraction.HandleChatterOptionClicked = self.OnGamepadDialogueOptionSelected
-    LORE_READER.SetupBook = self.OnBook
-    ZO_InventoryManager.AddQuestItem = self.OnItem
+    ZO_Interaction.PopulateChatterOption = self.KeyboardPopulateChatterOption
+    ZO_GamepadInteraction.PopulateChatterOption = self.GamepadPopulateChatterOption
+    ZO_Interaction.HandleChatterOptionClicked = self.KeyboardHandleChatterOptionClicked
+    ZO_GamepadInteraction.HandleChatterOptionClicked = self.GamepadHandleChatterOptionClicked
+    LORE_READER.SetupBook = self.SetupBook
+    ZO_InventoryManager.AddQuestItem = self.AddQuestItem
 
     StorySaverOldData:UpdateSchema()
 
@@ -467,9 +512,11 @@ function StorySaver:Initialize()
 
     self.interface = ZO_SortFilterList.New(StorySaverInterface, StorySaverEventListFrame)
     self.interface:InitializeInterface()
+
+    self.initialized = true
 end
 
-function StorySaver.OnAddOnLoaded(arg1, addOnName)
+function StorySaver.OnAddOnLoaded(_, addOnName)
     if addOnName ~= StorySaver.name then
         return
     end

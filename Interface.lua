@@ -24,7 +24,7 @@ function StorySaverInterface:InitializeInterface()
     self.sortHeaderGroup:SelectHeaderByKey('eventId')
 
     self.search = ZO_StringSearch:New()
-    self.search:AddProcessor(1, function(arg1, data, search, arg4)
+    self.search:AddProcessor(1, function(_, data, search, _)
         return zo_plainstrfind(data.body:lower(), search)
     end)
 
