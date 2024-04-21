@@ -333,7 +333,7 @@ function StorySaverInterface:OnRowStateChanged(control, state)
     bottomDividerControl:SetHidden(true)
 
     local eventType = control.data.eventType
-    if eventType == 'books' or not state then
+    if not state then
         return
     end
 
@@ -348,6 +348,9 @@ function StorySaverInterface:OnRowStateChanged(control, state)
     end
 
     local body = StorySaver:GetCache(eventType, name)[hash]
+    if eventType == 'books' then
+        body = table.concat(body):gsub('\r\n', ' \r\n')
+    end
     bodyControl:SetText(body)
     bodyControl:SetHidden(false)
 
@@ -380,7 +383,7 @@ function StorySaverInterface:Read(data)
     local parts = StorySaver:GetCache('books', title)[hash]
     local body = table.concat(parts)
 
-    StorySaver.coreSetupBook(LORE_READER, title, body, medium, showTitle, IsInGamepadPreferredMode())
+    LORE_READER:SetupBook(title, body, medium, showTitle, IsInGamepadPreferredMode())
 
     SCENE_MANAGER:Push('loreReaderDefault')
 end

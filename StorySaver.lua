@@ -271,7 +271,7 @@ function StorySaver.GamepadHandleChatterOptionClicked(obj, selectedData)
     StorySaver.coreGamepadHandleChatterOptionClicked(obj, selectedData)
 end
 
-function StorySaver:ProcessSetupBook(name, body, medium, showTitle)
+function StorySaver:ProcessOnShowBook(name, body, medium, showTitle, id)
     local eventType = 'books'
     local hash = HashString(body) .. '-' .. #body
 
@@ -303,14 +303,13 @@ function StorySaver:ProcessSetupBook(name, body, medium, showTitle)
     local eventData = self:NewEvent(eventType, name, hash)
     eventData.medium = medium
     eventData.showTitle = showTitle
+    eventData.id = id
 
     self.interface:TriggerRefreshData()
 end
 
-function StorySaver.SetupBook(obj, name, body, medium, showTitle, ...)
-    StorySaver:ProcessSetupBook(name, body, medium, showTitle)
-
-    StorySaver.coreSetupBook(obj, name, body, medium, showTitle, ...)
+function StorySaver.OnShowBook(_, name, body, medium, showTitle, id)
+    StorySaver:ProcessOnShowBook(name, body, medium, showTitle, id)
 end
 
 function StorySaver:ProcessAddQuestItem(questItem)
@@ -341,6 +340,7 @@ end
 function StorySaver:ProcessDialogue()
     local eventType = 'dialogues'
     local name = GetUnitName('interact')
+    local gender = GetUnitGender('interact')
 
     local area
     if not IsInGamepadPreferredMode() then
@@ -370,6 +370,8 @@ function StorySaver:ProcessDialogue()
     if eventData == nil then
         eventData = self:NewEvent(eventType, name, hash)
     end
+
+    eventData.gender = gender
 
     if eventData.selectedOptionHashes[self.lastSelectedOptionHash] == nil then
         eventData.selectedOptionHashes[self.lastSelectedOptionHash] = {}
@@ -480,14 +482,12 @@ function StorySaver:Initialize()
     self.coreGamepadPopulateChatterOption = ZO_GamepadInteraction.PopulateChatterOption
     self.coreKeyboardHandleChatterOptionClicked = ZO_Interaction.HandleChatterOptionClicked
     self.coreGamepadHandleChatterOptionClicked = ZO_GamepadInteraction.HandleChatterOptionClicked
-    self.coreSetupBook = LORE_READER.SetupBook
     self.coreAddQuestItem = ZO_InventoryManager.AddQuestItem
 
     ZO_Interaction.PopulateChatterOption = self.KeyboardPopulateChatterOption
     ZO_GamepadInteraction.PopulateChatterOption = self.GamepadPopulateChatterOption
     ZO_Interaction.HandleChatterOptionClicked = self.KeyboardHandleChatterOptionClicked
     ZO_GamepadInteraction.HandleChatterOptionClicked = self.GamepadHandleChatterOptionClicked
-    LORE_READER.SetupBook = self.SetupBook
     ZO_InventoryManager.AddQuestItem = self.AddQuestItem
 
     StorySaverOldData:UpdateSchema()
@@ -501,6 +501,7 @@ function StorySaver:Initialize()
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_END, self.OnDialogueEnd)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_COMPLETE, self.OnDialogueEnd)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHAT_MESSAGE_CHANNEL, self.OnSubtitle)
+    EVENT_MANAGER:RegisterForEvent(self.name, EVENT_SHOW_BOOK, self.OnShowBook)
 
     if StorySaverSettings.values.deleteOn == 'load' then
         self:DeleteOldData()

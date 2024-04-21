@@ -20,6 +20,7 @@
                 <Label name="$(parent)Body" font="ZoFontConversationText" color="ffffff" wrapMode="ELLIPSIS">
                     <Anchor point="TOP" relativeTo="$(parent)TopDivider" relativePoint="BOTTOM" offsetX="-30" offsetY="5"/>
                     <Dimensions x="750"/>
+                    <DimensionConstraints maxY="475"/>
                 </Label>
 
                 <Label name="$(parent)Options" font="ZoFontConversationOption" color="c5c29e" wrapMode="ELLIPSIS">
