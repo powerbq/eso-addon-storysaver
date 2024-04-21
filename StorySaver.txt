@@ -5,8 +5,8 @@
 
 ## Title: Story Saver
 ## Author: f1rex
-## Version: 14
-## AddOnVersion: 14
+## Version: 15
+## AddOnVersion: 15
 ## APIVersion: 101041
 ## SavedVariables: StorySaverSavedVariables
 ## OptionalDependsOn: LibMapPing
