@@ -22,32 +22,36 @@ function StorySaver:CleanupCacheForName(eventType, name)
     for hash, _ in pairs(self.accountSavedVariables.cache[eventType][name]) do
         local exists = false
 
-        local events = self.events[eventType][name]
-        if events == nil then
-            events = {}
-        end
-        for _, eventData in pairs(events) do
-            if hash == eventData.hash then
-                exists = true
-                break
-            end
+        for _, characterNames in pairs(self.accountSavedVariables.events) do
+            for _, eventTypes in pairs(characterNames) do
+                local events = eventTypes[eventType][name]
 
-            if eventType == 'dialogues' then
-                for selectedOptionHash, _ in pairs(eventData.selectedOptionHashes) do
-                    if hash == selectedOptionHash then
-                        exists = true
-                        break
-                    end
-                end
+                if events ~= nil then
+                    for _, eventData in pairs(events) do
+                        if hash == eventData.hash then
+                            exists = true
+                            break
+                        end
 
-                if exists then
-                    break
-                end
+                        if eventType == 'dialogues' then
+                            for selectedOptionHash, _ in pairs(eventData.selectedOptionHashes) do
+                                if hash == selectedOptionHash then
+                                    exists = true
+                                    break
+                                end
+                            end
 
-                for optionHash, _ in pairs(eventData.optionHashes) do
-                    if hash == optionHash then
-                        exists = true
-                        break
+                            if exists then
+                                break
+                            end
+
+                            for optionHash, _ in pairs(eventData.optionHashes) do
+                                if hash == optionHash then
+                                    exists = true
+                                    break
+                                end
+                            end
+                        end
                     end
                 end
             end

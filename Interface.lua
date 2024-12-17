@@ -4,6 +4,7 @@ ZO_CreateStringId('SI_WINDOW_TITLE_STORY_SAVER', 'Story Saver')
 StorySaverInterface = ZO_SortFilterList:Subclass()
 
 StorySaverInterface.showDeleteSelected = false
+StorySaverInterface.cacheNotFound = 'Cache not found'
 
 function StorySaverInterface:InitializeInterface()
     self.scrollData = ZO_ScrollList_GetDataList(self.list)
@@ -178,6 +179,9 @@ function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
         local line = '—'
         if hash ~= '' then
             line = StorySaver:GetCache('dialogues', name)[hash]
+            if line == nil then
+                line = self.cacheNotFound
+            end
         end
         if body ~= '' then
             body = body .. '\r\n'
@@ -227,9 +231,12 @@ function StorySaverInterface:FilterScrollList()
             local body = ''
             if eventType ~= 'items' then
                 body = StorySaver:GetCache(eventType, name)[hash]
+                if body == nil then
+                    body = self.cacheNotFound
+                end
             end
 
-            if eventType == 'books' then
+            if eventType == 'books' and body ~= self.cacheNotFound then
                 body = table.concat(body)
             elseif eventType == 'dialogues' then
                 local selectedOptionsBody = self:GetBodyForHashes(name, eventData.selectedOptionHashes)
@@ -348,7 +355,10 @@ function StorySaverInterface:OnRowStateChanged(control, state)
     end
 
     local body = StorySaver:GetCache(eventType, name)[hash]
-    if eventType == 'books' then
+    if body == nil then
+        body = self.cacheNotFound
+    end
+    if eventType == 'books' and body ~= self.cacheNotFound then
         body = table.concat(body):gsub('\r\n', ' \r\n')
     end
     bodyControl:SetText(body)
@@ -381,7 +391,12 @@ function StorySaverInterface:Read(data)
     local hash = eventData.hash
 
     local parts = StorySaver:GetCache('books', title)[hash]
-    local body = table.concat(parts)
+    local body
+    if parts ~= nil then
+        body = table.concat(parts)
+    else
+        body = self.cacheNotFound
+    end
 
     LORE_READER:SetupBook(title, body, medium, showTitle, IsInGamepadPreferredMode())
 

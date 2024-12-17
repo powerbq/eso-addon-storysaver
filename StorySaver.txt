@@ -7,7 +7,7 @@
 ## Author: f1rex
 ## Version: 15
 ## AddOnVersion: 15
-## APIVersion: 101041
+## APIVersion: 101044
 ## SavedVariables: StorySaverSavedVariables
 ## OptionalDependsOn: LibMapPing
 ## DependsOn: LibGPS>=65 LibAddonMenu-2.0>=30
