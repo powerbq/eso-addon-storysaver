@@ -347,11 +347,19 @@ function StorySaver:ProcessDialogue()
     local gender = GetUnitGender('interact')
 
     local area
+    local defaultColor
+    local seenColor
     if not IsInGamepadPreferredMode() then
         area = ZO_InteractWindowTargetAreaBodyText
+        defaultColor = self.defaultDialogueBodyColorKeyboard
+        seenColor = self.dialogueBodySeenColorKeyboard
     else
         area = ZO_InteractWindow_GamepadContainerText
+        defaultColor = self.defaultDialogueBodyColorKeyboard
+        seenColor = self.dialogueBodySeenColorGamepad
     end
+
+    area:SetColor(defaultColor:UnpackRGBA())
 
     local body = area:GetText()
     if #body == 0 then
@@ -373,6 +381,8 @@ function StorySaver:ProcessDialogue()
     local eventData = self:GetEventWithHash(eventType, name, hash)
     if eventData == nil then
         eventData = self:NewEvent(eventType, name, hash)
+    else
+        area:SetColor(seenColor:UnpackRGBA())
     end
 
     eventData.gender = gender
@@ -474,6 +484,11 @@ function StorySaver:Initialize()
     self:ResetLastData()
 
     self.eventNumber = 0
+
+    self.defaultDialogueBodyColorKeyboard = ZO_ColorDef:New(ZO_InteractWindowTargetAreaBodyText:GetColor())
+    self.defaultDialogueBodyColorGamepad = ZO_ColorDef:New(ZO_InteractWindow_GamepadContainerText:GetColor())
+    self.dialogueBodySeenColorKeyboard = ZO_ColorDef:New(GetInterfaceColor(INTERFACE_COLOR_TYPE_GENERAL, INTERFACE_GENERAL_COLOR_DISABLED))
+    self.dialogueBodySeenColorGamepad = ZO_GAMEPAD_DISABLED_UNSELECTED_COLOR
 
     local worldName, characterName = GetWorldName(), GetUnitName('player')
 
