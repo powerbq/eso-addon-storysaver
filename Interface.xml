@@ -81,7 +81,7 @@
                         </Button>
                         <Backdrop name="$(parent)Search" inherits="ZO_EditBackdrop">
                             <Anchor point="RIGHT" relativeTo="$(parent)Settings" relativePoint="LEFT" offsetX="-5"/>
-                            <Dimensions x="200"/>
+                            <Dimensions x="150"/>
                             <Controls>
                                 <EditBox name="$(parent)Box" inherits="ZO_DefaultEditForBackdrop ZO_EditDefaultText">
                                     <OnTextChanged>
@@ -93,10 +93,10 @@
                         <Label name="$(parent)SearchLabel" font="ZoFontGameLargeBold" text="STORY_SAVER_INTERFACE_SEARCH">
                             <Anchor point="RIGHT" relativeTo="$(parent)Search" relativePoint="LEFT" offsetX="-5"/>
                         </Label>
-                        <Label name="$(parent)Result" font="ZoFontGameLargeBold" horizontalAlignment="CENTER" wrapMode="ELLIPSIS">
-                            <Anchor point="LEFT" relativeTo="$(parent)Books" relativePoint="RIGHT"/>
-                            <Anchor point="RIGHT" relativeTo="$(parent)SearchLabel" relativePoint="LEFT"/>
-                        </Label>
+                        <Control name="$(parent)Character" inherits="ZO_ComboBox">
+                            <Anchor point="CENTER"/>
+                            <Dimensions x="250"/>
+                        </Control>
                     </Controls>
                 </Control>
                 <Control name="$(parent)Headers">
@@ -130,6 +130,16 @@
                 <Control name="$(parent)List" inherits="ZO_ScrollList">
                     <Anchor point="TOPLEFT" relativeTo="$(parent)Headers" relativePoint="BOTTOMLEFT"/>
                     <Anchor point="BOTTOMRIGHT" offsetX="-10" offsetY="-10"/>
+                </Control>
+                <Control name="$(parent)FilterResult">
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)List" relativePoint="BOTTOMLEFT"/>
+                    <Anchor point="TOPRIGHT" relativeTo="$(parent)List" relativePoint="BOTTOMRIGHT"/>
+                    <Dimensions y="40"/>
+                    <Controls>
+                        <Label name="$(parent)Result" font="ZoFontGameLargeBold" horizontalAlignment="CENTER" wrapMode="ELLIPSIS">
+                            <Anchor point="CENTER"/>
+                        </Label>
+                    </Controls>
                 </Control>
             </Controls>
         </TopLevelControl>

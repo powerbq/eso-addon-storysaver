@@ -204,21 +204,21 @@ function StorySaver:NewEvent(eventType, name, hash)
         eventData.selectedOptionHashes = {}
     end
 
-    if self.events[eventType][name] == nil then
-        self.events[eventType][name] = {}
+    if self.currentCharacterEvents[eventType][name] == nil then
+        self.currentCharacterEvents[eventType][name] = {}
     end
 
-    self.events[eventType][name][eventId] = eventData
+    self.currentCharacterEvents[eventType][name][eventId] = eventData
 
     return eventData
 end
 
 function StorySaver:GetEventWithHash(eventType, name, hash)
-    if self.events[eventType][name] == nil then
+    if self.currentCharacterEvents[eventType][name] == nil then
         return nil
     end
 
-    for _, eventData in pairs(self.events[eventType][name]) do
+    for _, eventData in pairs(self.currentCharacterEvents[eventType][name]) do
         if eventData.hash == hash then
             return eventData
         end
@@ -447,6 +447,16 @@ function StorySaver.OnSubtitle(_, msgType, from, body)
     StorySaver:ProcessSubtitle(msgType, from, body)
 end
 
+function StorySaver:SelectCharacter(characterName)
+    self.events = self.characters[characterName]
+
+    self.interface:TriggerRefreshData()
+end
+
+function StorySaver.onSelectCharacter(_, characterName, ...)
+    StorySaver:SelectCharacter(characterName)
+end
+
 function StorySaver:GetAccountSavedVariablesDefaults(worldName, characterName)
     local defaults = {
         settingsAccountWide = true,
@@ -495,7 +505,9 @@ function StorySaver:Initialize()
     self.accountSavedVariables = ZO_SavedVars:NewAccountWide(self.name .. 'SavedVariables', 1, nil, self:GetAccountSavedVariablesDefaults(worldName, characterName), nil, nil)
     self.characterSavedVariables = ZO_SavedVars:New(self.name .. 'SavedVariables', 1, nil, self:GetCharacterSavedVariablesDefaults(), worldName, nil)
 
-    self.events = self.accountSavedVariables.events[worldName][characterName]
+    self.characters = self.accountSavedVariables.events[worldName]
+    self.currentCharacterEvents = self.characters[characterName]
+    self.events = self.currentCharacterEvents
 
     self.coreKeyboardPopulateChatterOption = ZO_Interaction.PopulateChatterOption
     self.coreGamepadPopulateChatterOption = ZO_GamepadInteraction.PopulateChatterOption

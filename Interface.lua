@@ -5,6 +5,7 @@ StorySaverInterface = ZO_SortFilterList:Subclass()
 
 StorySaverInterface.showDeleteSelected = false
 StorySaverInterface.cacheNotFound = 'Cache not found'
+StorySaverInterface.characterSelectorReady = false
 
 function StorySaverInterface:InitializeInterface()
     self.scrollData = ZO_ScrollList_GetDataList(self.list)
@@ -199,6 +200,7 @@ function StorySaverInterface:FilterScrollList()
     ZO_ClearNumericallyIndexedTable(self.scrollData)
 
     local filterAndSearchControl = GetControl(StorySaverEventListFrame, 'FilterAndSearch')
+    local filterResultControl = GetControl(StorySaverEventListFrame, 'FilterResult')
 
     local showDialogues = GetControl(filterAndSearchControl, 'Dialogues').checked
     local showSubtitles = GetControl(filterAndSearchControl, 'Subtitles').checked
@@ -206,7 +208,10 @@ function StorySaverInterface:FilterScrollList()
     local showItems = GetControl(filterAndSearchControl, 'Items').checked
     local search = GetControl(GetControl(filterAndSearchControl, 'Search'), 'Box'):GetText():lower()
 
-    local resultControl = GetControl(filterAndSearchControl, 'Result')
+    local resultControl = GetControl(filterResultControl, 'Result')
+
+    local characterControl = GetControl(filterAndSearchControl, 'Character')
+    self:SetupCharacterSelector(characterControl)
 
     for _, row in pairs(self.masterList) do
         local skip = false
@@ -459,4 +464,22 @@ function StorySaverInterface.SetupCheckableButton(control, texturePrefix)
     control:SetHandler('OnClicked', handler)
 
     handler()
+end
+
+function StorySaverInterface:SetupCharacterSelector(control)
+    if not self.characterSelectorReady then
+        local combobox = ZO_ComboBox_ObjectFromContainer(control)
+
+        combobox:ClearItems()
+
+        for characterName, _ in pairs(StorySaver.characters) do
+            local entry = combobox:CreateItemEntry(characterName, StorySaver.onSelectCharacter)
+            combobox:AddItem(entry)
+            if characterName == GetUnitName('player') then
+                combobox:SelectItem(entry)
+            end
+        end
+
+        self.characterSelectorReady = true
+    end
 end
