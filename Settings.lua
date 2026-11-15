@@ -1,7 +1,10 @@
-﻿StorySaverSettings = {}
+﻿StorySaver = StorySaver or {}
+local StorySaver = StorySaver
 
-StorySaverSettings.values = {}
-StorySaverSettings.defaults = {
+StorySaver.Settings = {}
+
+StorySaver.Settings.values = {}
+StorySaver.Settings.defaults = {
     showOptionDate = true,
     deleteDialoguesOlderThan = 0,
     useOptionsDates = true,
@@ -12,7 +15,7 @@ StorySaverSettings.defaults = {
     optimizeOn = 'manually',
 }
 
-function StorySaverSettings:SelectSource()
+function StorySaver.Settings:SelectSource()
     if StorySaver.accountSavedVariables.settingsAccountWide then
         if StorySaver.accountSavedVariables.settings == nil then
             StorySaver.accountSavedVariables.settings = StorySaver.characterSavedVariables.settings
@@ -28,7 +31,7 @@ function StorySaverSettings:SelectSource()
     end
 end
 
-function StorySaverSettings:Cleanup()
+function StorySaver.Settings:Cleanup()
     for key, _ in pairs(self.values) do
         local delete = true
 
@@ -45,7 +48,7 @@ function StorySaverSettings:Cleanup()
     end
 end
 
-function StorySaverSettings:SetupPanel()
+function StorySaver.Settings:SetupPanel()
     self:SelectSource()
     self:Cleanup()
 

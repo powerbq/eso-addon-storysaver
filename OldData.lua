@@ -1,6 +1,9 @@
-﻿StorySaverOldData = {}
+﻿StorySaver = StorySaver or {}
+local StorySaver = StorySaver
 
-function StorySaverOldData:CombineDialogueOptions(name, targetEventId)
+StorySaver.OldData = {}
+
+function StorySaver.OldData:CombineDialogueOptions(name, targetEventId)
     local targetEventData = StorySaver.events['dialogues'][name][targetEventId]
     if targetEventData == nil then
         return
@@ -24,7 +27,7 @@ function StorySaverOldData:CombineDialogueOptions(name, targetEventId)
     end
 end
 
-function StorySaverOldData:OptimizeDialogues()
+function StorySaver.OldData:OptimizeDialogues()
     for name, events in pairs(StorySaver.events['dialogues']) do
         local keys = {}
         for eventId, _ in pairs(events) do
@@ -41,7 +44,7 @@ function StorySaverOldData:OptimizeDialogues()
     end
 end
 
-function StorySaverOldData:IsEventDuplicate(eventType, name, currentEventId)
+function StorySaver.OldData:IsEventDuplicate(eventType, name, currentEventId)
     local currentEventData = StorySaver.events[eventType][name][currentEventId]
 
     for eventId, eventData in pairs(StorySaver.events[eventType][name]) do
@@ -55,7 +58,7 @@ function StorySaverOldData:IsEventDuplicate(eventType, name, currentEventId)
     return false
 end
 
-function StorySaverOldData:OptimizeOthers()
+function StorySaver.OldData:OptimizeOthers()
     local eventTypes = { 'subtitles', 'books', 'items' }
     for _, eventType in pairs(eventTypes) do
         for name, events in pairs(StorySaver.events[eventType]) do
@@ -77,7 +80,7 @@ function StorySaverOldData:OptimizeOthers()
     end
 end
 
-function StorySaverOldData:UpdateSchemaV1()
+function StorySaver.OldData:UpdateSchemaV1()
     if StorySaver.accountSavedVariables.zones ~= nil then
         StorySaver.accountSavedVariables.zones = nil
     end
@@ -109,7 +112,7 @@ function StorySaverOldData:UpdateSchemaV1()
     end
 end
 
-function StorySaverOldData:UpdateSchemaV2()
+function StorySaver.OldData:UpdateSchemaV2()
     if StorySaver.accountSavedVariables.dialogues ~= nil then
         StorySaver.accountSavedVariables.cache.dialogues = StorySaver.accountSavedVariables.dialogues
         StorySaver.accountSavedVariables.dialogues = nil
@@ -182,7 +185,7 @@ function StorySaverOldData:UpdateSchemaV2()
     end
 end
 
-function StorySaverOldData:UpdateSchema()
+function StorySaver.OldData:UpdateSchema()
     self:UpdateSchemaV1()
     self:UpdateSchemaV2()
 end

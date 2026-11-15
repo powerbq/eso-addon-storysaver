@@ -49,35 +49,35 @@
                             <Anchor point="LEFT" relativeTo="$(parent)FilterLabel" relativePoint="RIGHT"/>
                             <Dimensions x="40" y="40"/>
                             <OnInitialized>
-                                StorySaverInterface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_social_')
+                                StorySaver.Interface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_social_')
                             </OnInitialized>
                         </Button>
                         <Button name="$(parent)Subtitles">
                             <Anchor point="LEFT" relativeTo="$(parent)Dialogues" relativePoint="RIGHT" offsetX="-10"/>
                             <Dimensions x="40" y="40"/>
                             <OnInitialized>
-                                StorySaverInterface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_notifications_')
+                                StorySaver.Interface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_notifications_')
                             </OnInitialized>
                         </Button>
                         <Button name="$(parent)Books">
                             <Anchor point="LEFT" relativeTo="$(parent)Subtitles" relativePoint="RIGHT" offsetX="-10"/>
                             <Dimensions x="40" y="40"/>
                             <OnInitialized>
-                                StorySaverInterface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_journal_')
+                                StorySaver.Interface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_journal_')
                             </OnInitialized>
                         </Button>
                         <Button name="$(parent)Items">
                             <Anchor point="LEFT" relativeTo="$(parent)Books" relativePoint="RIGHT" offsetX="-10"/>
                             <Dimensions x="40" y="40"/>
                             <OnInitialized>
-                                StorySaverInterface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_inventory_')
+                                StorySaver.Interface.SetupCheckableButton(self, 'EsoUI/Art/MainMenu/menubar_inventory_')
                             </OnInitialized>
                         </Button>
                         <Button name="$(parent)Settings" clickSound="Click">
                             <Anchor point="RIGHT"/>
                             <Dimensions y="40" x="40"/>
                             <Textures normal="EsoUI/Art/ChatWindow/chat_options_up.dds" pressed="EsoUI/Art/ChatWindow/chat_options_down.dds" mouseOver="EsoUI/Art/ChatWindow/chat_options_over.dds"/>
-                            <OnClicked>LibAddonMenu2:OpenToPanel(StorySaverSettings.panel)</OnClicked>
+                            <OnClicked>LibAddonMenu2:OpenToPanel(StorySaver.Settings.panel)</OnClicked>
                         </Button>
                         <Backdrop name="$(parent)Search" inherits="ZO_EditBackdrop">
                             <Anchor point="RIGHT" relativeTo="$(parent)Settings" relativePoint="LEFT" offsetX="-5"/>

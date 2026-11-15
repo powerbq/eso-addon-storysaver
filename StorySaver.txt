@@ -4,10 +4,11 @@
 ; States and/or other countries. All rights reserved.
 
 ## Title: Story Saver
+## Description: Saves dialogues, subtitles, books and quest items so you can read them again later
 ## Author: f1rex
-## Version: 18
-## AddOnVersion: 18
-## APIVersion: 101049
+## Version: 19
+## AddOnVersion: 19
+## APIVersion: 101051
 ## SavedVariables: StorySaverSavedVariables
 ## OptionalDependsOn: LibMapPing
 ## DependsOn: LibGPS>=73 LibAddonMenu-2.0>=43

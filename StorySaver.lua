@@ -1,4 +1,5 @@
-StorySaver = {}
+StorySaver = StorySaver or {}
+local StorySaver = StorySaver
 
 StorySaver.name = 'StorySaver'
 
@@ -133,13 +134,13 @@ function StorySaver:DeleteOldData()
     for eventType, names in pairs(self.events) do
         local days
         if eventType == 'dialogues' then
-            days = StorySaverSettings.values.deleteDialoguesOlderThan
+            days = StorySaver.Settings.values.deleteDialoguesOlderThan
         elseif eventType == 'subtitles' then
-            days = StorySaverSettings.values.deleteSubtitlesOlderThan
+            days = StorySaver.Settings.values.deleteSubtitlesOlderThan
         elseif eventType == 'books' then
-            days = StorySaverSettings.values.deleteBooksOlderThan
+            days = StorySaver.Settings.values.deleteBooksOlderThan
         elseif eventType == 'items' then
-            days = StorySaverSettings.values.deleteItemsOlderThan
+            days = StorySaver.Settings.values.deleteItemsOlderThan
         end
 
         if days > 0 then
@@ -150,7 +151,7 @@ function StorySaver:DeleteOldData()
                     local timeStamp, _ = self:ParseEventId(eventId)
                     timeStamp = tonumber(timeStamp)
 
-                    if eventType == 'dialogues' and StorySaverSettings.values.useOptionsDates then
+                    if eventType == 'dialogues' and StorySaver.Settings.values.useOptionsDates then
                         for _, data in pairs(eventData.selectedOptionHashes) do
                             if (data.timeStamp ~= tonumber(data.timeStamp)) then
                                 data.timeStamp = tonumber(data.timeStamp)
@@ -460,7 +461,7 @@ end
 function StorySaver:GetAccountSavedVariablesDefaults(worldName, characterName)
     local defaults = {
         settingsAccountWide = true,
-        settings = StorySaverSettings.defaults,
+        settings = StorySaver.Settings.defaults,
         cache = {
             dialogues = {},
             subtitles = {},
@@ -521,9 +522,9 @@ function StorySaver:Initialize()
     ZO_GamepadInteraction.HandleChatterOptionClicked = self.GamepadHandleChatterOptionClicked
     ZO_InventoryManager.AddQuestItem = self.AddQuestItem
 
-    StorySaverOldData:UpdateSchema()
+    StorySaver.OldData:UpdateSchema()
 
-    StorySaverSettings:SetupPanel()
+    StorySaver.Settings:SetupPanel()
 
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_BEGIN, self.OnDialogue)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CONVERSATION_UPDATED, self.OnDialogue)
@@ -531,18 +532,24 @@ function StorySaver:Initialize()
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_COMPLETE_DIALOG, self.OnDialogue)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHATTER_END, self.OnDialogueEnd)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_COMPLETE, self.OnDialogueEnd)
-    EVENT_MANAGER:RegisterForEvent(self.name, EVENT_CHAT_MESSAGE_CHANNEL, self.OnSubtitle)
+    local subtitleChannels = { CHAT_CHANNEL_MONSTER_EMOTE, CHAT_CHANNEL_MONSTER_SAY, CHAT_CHANNEL_MONSTER_WHISPER, CHAT_CHANNEL_MONSTER_YELL }
+    for _, channel in pairs(subtitleChannels) do
+        local subtitleNamespace = self.name .. 'Subtitle' .. channel
+        EVENT_MANAGER:RegisterForEvent(subtitleNamespace, EVENT_CHAT_MESSAGE_CHANNEL, self.OnSubtitle)
+        EVENT_MANAGER:AddFilterForEvent(subtitleNamespace, EVENT_CHAT_MESSAGE_CHANNEL, REGISTER_FILTER_CHAT_CHANNEL, channel)
+    end
+
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_SHOW_BOOK, self.OnShowBook)
 
-    if StorySaverSettings.values.deleteOn == 'load' then
+    if StorySaver.Settings.values.deleteOn == 'load' then
         self:DeleteOldData()
     end
 
-    if StorySaverSettings.values.optimizeOn == 'load' then
+    if StorySaver.Settings.values.optimizeOn == 'load' then
         self:OptimizeStorage()
     end
 
-    self.interface = ZO_SortFilterList.New(StorySaverInterface, StorySaverEventListFrame)
+    self.interface = ZO_SortFilterList.New(StorySaver.Interface, StorySaverEventListFrame)
     self.interface:InitializeInterface()
 
     self.initialized = true

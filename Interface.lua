@@ -1,13 +1,16 @@
+StorySaver = StorySaver or {}
+local StorySaver = StorySaver
+
 ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_STORY_SAVER', 'Toggle Story Saver')
 ZO_CreateStringId('SI_WINDOW_TITLE_STORY_SAVER', 'Story Saver')
 
-StorySaverInterface = ZO_SortFilterList:Subclass()
+StorySaver.Interface = ZO_SortFilterList:Subclass()
 
-StorySaverInterface.showDeleteSelected = false
-StorySaverInterface.cacheNotFound = 'Cache not found'
-StorySaverInterface.characterSelectorReady = false
+StorySaver.Interface.showDeleteSelected = false
+StorySaver.Interface.cacheNotFound = 'Cache not found'
+StorySaver.Interface.characterSelectorReady = false
 
-function StorySaverInterface:InitializeInterface()
+function StorySaver.Interface:InitializeInterface()
     self.scrollData = ZO_ScrollList_GetDataList(self.list)
 
     ZO_ScrollList_AddDataType(self.list, 1, 'StorySaverEventListRow', 40, function(control, data)
@@ -157,11 +160,11 @@ function StorySaverInterface:InitializeInterface()
     end
 end
 
-function StorySaverInterface:SortScrollList()
+function StorySaver.Interface:SortScrollList()
     table.sort(self.scrollData, self.sortFunction)
 end
 
-function StorySaverInterface:GetDateStringFromTimestamp(timeStamp)
+function StorySaver.Interface:GetDateStringFromTimestamp(timeStamp)
     local currentTimeStamp = GetTimeStamp()
     local today = GetDateStringFromTimestamp(currentTimeStamp)
 
@@ -173,7 +176,7 @@ function StorySaverInterface:GetDateStringFromTimestamp(timeStamp)
     return when
 end
 
-function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
+function StorySaver.Interface:GetBodyForHashes(name, hashes, withDate)
     local body = ''
 
     for hash, data in pairs(hashes) do
@@ -188,7 +191,7 @@ function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
             body = body .. '\r\n'
         end
         body = body .. line
-        if withDate and StorySaverSettings.values.showOptionDate then
+        if withDate and StorySaver.Settings.values.showOptionDate then
             body = body .. ' [' .. self:GetDateStringFromTimestamp(data.timeStamp) .. ']'
         end
     end
@@ -196,7 +199,7 @@ function StorySaverInterface:GetBodyForHashes(name, hashes, withDate)
     return body
 end
 
-function StorySaverInterface:FilterScrollList()
+function StorySaver.Interface:FilterScrollList()
     ZO_ClearNumericallyIndexedTable(self.scrollData)
 
     local filterAndSearchControl = GetControl(StorySaverEventListFrame, 'FilterAndSearch')
@@ -281,7 +284,7 @@ function StorySaverInterface:FilterScrollList()
     self:AddKeybinds()
 end
 
-function StorySaverInterface:BuildMasterList()
+function StorySaver.Interface:BuildMasterList()
     self.masterList = {}
 
     for _, eventType in pairs({ 'dialogues', 'subtitles', 'books', 'items' }) do
@@ -297,7 +300,7 @@ function StorySaverInterface:BuildMasterList()
     end
 end
 
-function StorySaverInterface:SetupRow(control, data)
+function StorySaver.Interface:SetupRow(control, data)
     control.data = data
 
     local typeControl = GetControl(control, 'Type')
@@ -317,7 +320,7 @@ function StorySaverInterface:SetupRow(control, data)
     ZO_SortFilterList.SetupRow(self, control, data)
 end
 
-function StorySaverInterface:OnRowStateChanged(control, state)
+function StorySaver.Interface:OnRowStateChanged(control, state)
     if state then
         self:Row_OnMouseEnter(control)
     else
@@ -388,7 +391,7 @@ function StorySaverInterface:OnRowStateChanged(control, state)
     StorySaverBrowserFrame:SetHidden(false)
 end
 
-function StorySaverInterface:Read(data)
+function StorySaver.Interface:Read(data)
     local title = data.name
     local eventData = data.eventData
     local medium = eventData.medium
@@ -408,7 +411,7 @@ function StorySaverInterface:Read(data)
     SCENE_MANAGER:Push('loreReaderDefault')
 end
 
-function StorySaverInterface:ShowOnMap(data)
+function StorySaver.Interface:ShowOnMap(data)
     local eventData = data.eventData
     local zoneIndex = eventData.zoneIndex
     local globalX = eventData.x
@@ -433,13 +436,13 @@ function StorySaverInterface:ShowOnMap(data)
     end, 1500)
 end
 
-function StorySaverInterface:TriggerRefreshData()
+function StorySaver.Interface:TriggerRefreshData()
     if not StorySaverEventListFrame:IsHidden() then
         self:RefreshData()
     end
 end
 
-function StorySaverInterface.SetupCheckableButton(control, texturePrefix)
+function StorySaver.Interface.SetupCheckableButton(control, texturePrefix)
     control.texturePrefix = texturePrefix
     control.checked = false
 
@@ -466,7 +469,7 @@ function StorySaverInterface.SetupCheckableButton(control, texturePrefix)
     handler()
 end
 
-function StorySaverInterface:SetupCharacterSelector(control)
+function StorySaver.Interface:SetupCharacterSelector(control)
     if not self.characterSelectorReady then
         local combobox = ZO_ComboBox_ObjectFromContainer(control)
 
